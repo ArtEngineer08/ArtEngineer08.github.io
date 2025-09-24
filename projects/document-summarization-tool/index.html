@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Document Summarization Tool</title>
+  <meta name="description" content="Summarize long documents into concise, structured notes." />
+  <style>
+    * { box-sizing: border-box }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 28px; background:#f4f4f4; color:#111;
+      transition: background-color .25s ease, color .25s ease, border-color .25s ease;
+      max-width: 900px; margin-left:auto; margin-right:auto;
+    }
+    body.dark { background:#1f1f1f; color:#f5f5f5; }
+    a { color: inherit; }
+
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:12px }
+    .left { display:flex; align-items:center; gap:12px }
+    h1 { margin:0 0 6px }
+    .subtitle { margin:0; color:#666; font-size:14px }
+    body.dark .subtitle { color:#c9c9c9 }
+
+    /* square hero image — full image visible */
+    .hero {
+	  max-height: 70vh;
+      width:100%;
+      height: auto;
+      object-fit: contain;
+      border-radius: 12px;
+      display:block;
+    }
+
+    section { margin:18px 0 }
+    h2 { margin:0 0 8px; font-size:20px }
+    .meta { color:#666; font-size:12px; margin: 2px 0 10px }
+    body.dark .meta { color:#c9c9c9 }
+    code { background:#f0f0f0; padding:2px 6px; border-radius:6px }
+    body.dark code { background:#2a2a2a }
+
+    /* dark-mode switch (labels always black) */
+    .theme-switch {
+      position: relative; width: 90px; height: 32px; border-radius: 16px;
+      background:#ccc; border:1px solid #aaa; display:inline-flex; align-items:center;
+      justify-content:space-between; padding:0 10px; cursor:pointer; user-select:none; gap:6px;
+    }
+    .theme-switch span { font-size:12px; line-height:1; pointer-events:none; color:#000 }
+    .switch-dot {
+      position:absolute; top:2px; left:2px; width:28px; height:28px; border-radius:50%;
+      background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); transition: transform .25s ease;
+    }
+    body.dark .switch-dot { transform: translateX(58px); }
+
+    .card {
+      border:1px solid #e0e0e0; border-radius:12px; background:#fff;
+      padding:14px; transition: background .25s ease, border-color .25s ease;
+    }
+    body.dark .card { background:#222; border-color:#3a3a3a }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="left">
+      <a href="../../">← Back to portfolio</a>
+    </div>
+    <div class="theme-switch" id="theme-switch" role="button" aria-label="Toggle dark mode" aria-pressed="false" tabindex="0">
+      <span>Light</span>
+      <div class="switch-dot"></div>
+      <span>Dark</span>
+    </div>
+  </header>
+
+  <!-- Project image saved in THIS folder -->
+  <img
+    class="hero"
+    src="./document-summarization-tool.png"
+    alt="Document Summarization Tool preview"
+    onerror="this.onerror=null;this.src='../../images/default.png';"
+  >
+
+  <h1>Document Summarization Tool</h1>
+  <p class="meta">Work project · Summarize long documents into concise, structured notes.</p>
+
+  <section class="card">
+    <h2>Overview</h2>
+    <p>
+      The Document Summarization Tool ingests lengthy files (txt, rtf, or pasted text) and
+      produces clean, skimmable summaries. It extracts key points, decisions, risks, action items,
+      and optional highlights—useful for quick handoffs or meeting prep.
+    </p>
+  </section>
+  
+  <section class="card">
+    <h2>What it does</h2>
+    <ul>
+	  <li><strong>System Message Presets:</strong> Auto-inserts a pre-configured system message clarifying response requirements.</li>
+      <li><strong>LLM Interaction:</strong> Sends API request to OpenAI for chat completion.</li>
+	  <li><strong>Chat Format:</strong> Multi-turn chat format for follow-up conversatioin and edits.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>How to use it</h2>
+    <ol>
+      <li>Open the tool and upload a file or paste text.</li>
+      <li>Select Summarize Document for a quick response or use the chat interface.</li>
+      <li>Generate the summary, tweak sections if needed, and copy the final text for use anywhere.</li>
+    </ol>
+  </section>
+  
+   <section class="card">
+    <h2>To Do</h2>
+    <ol>
+      <li>Expose pre-configured system messages to the user.</li>
+      <li>Add an Export Summary button.</li>
+	  <li>Add more presets.</li>
+      <li>Make the LLM output a structured json so that the summary deliverable is an identifiable object.</li>
+	  <li>Support multiple deliverables besides summarization.</li>
+    </ol>
+  </section>
+
+  <script>
+  // Dark-mode toggle (persists; respects system as default)
+  (() => {
+    const STORAGE_KEY = 'portfolioDarkMode';
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const shouldDark = saved === null ? prefersDark : saved === 'true';
+    if (shouldDark) document.body.classList.add('dark');
+
+    const btn = document.getElementById('theme-switch');
+    const setPressed = () => btn.setAttribute('aria-pressed', document.body.classList.contains('dark') ? 'true' : 'false');
+    setPressed();
+
+    function toggle() {
+      document.body.classList.toggle('dark');
+      localStorage.setItem(STORAGE_KEY, document.body.classList.contains('dark'));
+      setPressed();
+    }
+    btn.addEventListener('click', toggle);
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+  })();
+  </script>
+</body>
+</html>
