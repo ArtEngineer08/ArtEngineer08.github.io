@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>AI/Programming Portfolio</title>
-  <meta name="description" content="AI tools, games, and experiments designed by me." />
+  <title>AI/Programming Portfolio — Your Name</title>
+  <meta name="description" content="Collection of my tools, games, and projects written by AI coding agents and designed by me." />
   <style>
     :root { --max: 1100px }
     * { box-sizing: border-box }
@@ -20,13 +20,15 @@
     body.dark { background:#1f1f1f; color:#f5f5f5; }
 
     .wrap { width:100%; max-width: var(--max) }
-
-    header { display:flex; gap:16px; align-items:center; justify-content:space-between; margin-bottom:10px }
-    h1 { margin:0 }
-    .sub { color:#666; margin:0 0 20px }
+    header { display:flex; gap:16px; align-items:flex-start; justify-content:space-between; margin-bottom:12px }
+    h1 { margin:0 0 4px; line-height:1.15 }
+    .sub { margin:0; color:#555 }
     body.dark .sub { color:#c9c9c9 }
 
+    .section { margin-top: 24px }
+    .section h2 { margin: 0 0 10px; font-size: 20px }
     .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px }
+
     .card {
       display:block; text-decoration:none; color:inherit;
       border:1px solid #e8e8e8; border-radius:14px; overflow:hidden;
@@ -38,12 +40,16 @@
     .inner { padding:12px 14px }
     .title { margin:0 0 6px; font-size:18px; font-weight:650 }
     .meta { display:flex; gap:8px; flex-wrap:wrap; color:#666; font-size:12px }
-    .tag { border:1px solid #ddd; border-radius:999px; padding:2px 8px }
-    .uc { background:#fff7d6; border-color:#f1da8a }
-    footer { margin-top:28px; color:#777; font-size:14px }
+    .desc { color:#444; font-size:13px; margin-top:6px }
+    body.dark .meta, body.dark .desc { color:#c9c9c9 }
     body.dark .card { border-color:#3a3a3a; background:#222 }
-    body.dark .meta, body.dark footer { color:#c9c9c9 }
+
+    /* Under Construction highlight */
+    .uc { background:#fff7d6; border-color:#f1da8a }
     body.dark .uc { background:#2a2408; border-color:#5a4a10 }
+
+    footer { margin-top:28px; color:#777; font-size:14px }
+    body.dark footer { color:#c9c9c9 }
 
     /* ---- dark-mode switch ---- */
     .switch-wrap { display:flex; align-items:center; gap:14px }
@@ -52,22 +58,26 @@
       background:#ccc; border:1px solid #aaa; display:inline-flex; align-items:center;
       justify-content:space-between; padding:0 10px; cursor:pointer; user-select:none; gap:6px;
     }
-    .theme-switch span { font-size:12px; line-height:1; pointer-events:none }
+    .theme-switch span { font-size:12px; line-height:1; pointer-events:none; color:#000 } /* always black text */
     .switch-dot {
       position:absolute; top:2px; left:2px; width:28px; height:28px; border-radius:50%;
       background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); transition: transform .25s ease;
     }
     body.dark .switch-dot { transform: translateX(58px); }
+
+    .muted-note { font-size:13px; color:#666; margin-bottom:8px }
+    body.dark .muted-note { color:#bdbdbd }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
       <div>
-        <h1>AI/Programming Portfolio</h1>
-        <p class="sub">Tools, games, and experiments. Click a card for details.</p>
+        <h1>AI/Programming Portfolio<br>Collection of my tools, games, and projects written by AI coding agents and designed by me.</h1>
+        <p class="sub">Click a card for details.</p>
       </div>
       <div class="switch-wrap">
+        <a href="mailto:you@example.com">you@example.com</a>
         <div class="theme-switch" id="theme-switch" role="button" aria-label="Toggle dark mode" aria-pressed="false" tabindex="0">
           <span>Light</span>
           <div class="switch-dot"></div>
@@ -76,78 +86,165 @@
       </div>
     </header>
 
-    <section class="grid">
-      <a class="card" href="projects/skyward-blob/">
-        <img class="thumb" src="./images/skyward-blob.png" alt="Skyward Blob">
-        <div class="inner"><h3 class="title">Skyward Blob</h3><div class="meta"><span class="tag">game</span><span>jump combos & juice</span></div></div>
-      </a>
-
-      <a class="card" href="projects/space-opoly/">
-        <img class="thumb" src="./images/space-opoly.png" alt="Space-opoly">
-        <div class="inner"><h3 class="title">Space-opoly</h3><div class="meta"><span class="tag">game</span><span>2-player solar-system Monopoly</span></div></div>
-      </a>
-
-      <a class="card" href="projects/pixel-art-fixer/">
-        <img class="thumb" src="./images/pixel-art-fixer.png" alt="Pixel Art Fixer">
-        <div class="inner"><h3 class="title">Pixel Art Fixer</h3><div class="meta"><span class="tag">tool</span><span>turn faux “pixel art” into pixels</span></div></div>
-      </a>
-
-      <a class="card" href="projects/chat-history-processor/">
-        <img class="thumb" src="./images/chat-history-processor.png" alt="Chat History Processor">
-        <div class="inner"><h3 class="title">Chat History Processor</h3><div class="meta"><span class="tag">LLM</span><span>summarize & tag ChatGPT exports</span></div></div>
-      </a>
-
-      <a class="card" href="projects/svg-icon-viewer/">
-        <img class="thumb" src="./images/svg-icon-viewer.png" alt="SVG Icon Viewer">
-        <div class="inner"><h3 class="title">SVG Icon Viewer</h3><div class="meta"><span class="tag">tool</span><span>AI-generated SVGs for arcade UIs</span></div></div>
-      </a>
-
-      <a class="card" href="projects/traders-starmap/">
-        <img class="thumb" src="./images/traders-starmap.png" alt="Trader's Starmap">
-        <div class="inner"><h3 class="title">Trader’s Starmap</h3><div class="meta"><span class="tag">mockup</span><span>Endless Sky trade routes</span></div></div>
-      </a>
-
-      <a class="card" href="projects/elemental-equations/">
-        <img class="thumb" src="./images/elemental-equations.png" alt="Elemental Equations">
-        <div class="inner"><h3 class="title">Elemental Equations</h3><div class="meta"><span class="tag">LLM</span><span>latent-space combo toy</span></div></div>
-      </a>
-
-      <a class="card" href="projects/orbital-mechanics-sim/">
-        <img class="thumb" src="./images/orbital-mechanics-sim.png" alt="Orbital Mechanics Sim">
-        <div class="inner"><h3 class="title">Orbital Mechanics Sim</h3><div class="meta"><span class="tag">sim</span><span>gravity play → study</span></div></div>
-      </a>
-
-      <a class="card" href="projects/program-the-robot/">
-        <img class="thumb" src="./images/program-the-robot.png" alt="Program the Robot">
-        <div class="inner"><h3 class="title">Program the Robot</h3><div class="meta"><span class="tag">game</span><span>kids’ grid programming</span></div></div>
-      </a>
-
-      <a class="card" href="projects/n64-twitter-client/">
-        <img class="thumb" src="./images/n64-twitter-client.png" alt="N64 Twitter Client">
-        <div class="inner"><h3 class="title">N64 Twitter Client</h3><div class="meta"><span class="tag">retro</span><span>what if… in the 90s?</span></div></div>
-      </a>
-
-      <a class="card uc" href="projects/llm-brainstorming-framework/">
-        <img class="thumb" src="./images/llm-brainstorming-framework.png" alt="LLM Brainstorming Framework">
-        <div class="inner"><h3 class="title">LLM Brainstorming Framework</h3><div class="meta"><span class="tag">under construction</span></div></div>
-      </a>
-
-      <a class="card uc" href="projects/kingdoms-ccg-restored/">
-        <img class="thumb" src="./images/kingdoms-ccg-restored.png" alt="Kingdoms CCG Restored">
-        <div class="inner"><h3 class="title">Kingdoms CCG Restored</h3><div class="meta"><span class="tag">under construction</span></div></div>
-      </a>
-
-      <a class="card uc" href="projects/medieval-kingdom/">
-        <img class="thumb" src="./images/medieval-kingdom.png" alt="Medieval Kingdom">
-        <div class="inner"><h3 class="title">Medieval Kingdom</h3><div class="meta"><span class="tag">under construction</span><span>LLM point-and-click demo</span></div></div>
-      </a>
-
-      <a class="card" href="projects/classic-games/">
-        <img class="thumb" src="./images/classic-games.png" alt="Classic Games collection">
-        <div class="inner"><h3 class="title">Classic Games</h3><div class="meta"><span class="tag">collection</span><span>Farkle, Yahtzee, Chess…</span></div></div>
-      </a>
+    <!-- WORK PROJECTS (add items here when ready) -->
+    <section class="section" id="work-projects">
+      <h2>Work Projects</h2>
+      <p class="muted-note">Coming soon. (Move cards here if they’re professional/work builds.)</p>
+      <div class="grid">
+        <!-- Example placeholder card (delete later)
+        <a class="card" href="#">
+          <img class="thumb" src="./images/example-work.png" alt="Example Work Project">
+          <div class="inner">
+            <h3 class="title">Example Work Project</h3>
+            <div class="meta"><span>LLM tooling</span></div>
+            <div class="desc">Short description of the work project.</div>
+          </div>
+        </a>
+        -->
+      </div>
     </section>
 
+    <!-- PERSONAL PROJECTS -->
+    <section class="section" id="personal-projects">
+      <h2>Personal Projects</h2>
+      <div class="grid">
+        <a class="card" href="projects/skyward-blob/">
+          <img class="thumb" src="./images/skyward-blob.png" alt="Skyward Blob">
+          <div class="inner">
+            <h3 class="title">Skyward Blob</h3>
+            <div class="meta"><span>game</span></div>
+            <div class="desc">Simple game with fun jumping mechanics and satisfying combos.</div>
+          </div>
+        </a>
+
+        <a class="card" href="projects/space-opoly/">
+          <img class="thumb" src="./images/space-opoly.png" alt="Space-opoly">
+          <div class="inner">
+            <h3 class="title">Space-opoly</h3>
+            <div class="meta"><span>game</span></div>
+            <div class="desc">Two-player Monopoly game written from scratch, themed around traveling through the solar system.</div>
+          </div>
+        </a>
+
+        <a class="card" href="projects/pixel-art-fixer/">
+          <img class="thumb" src="./images/pixel-art-fixer.png" alt="Pixel Art Fixer">
+          <div class="inner">
+            <h3 class="title">Pixel Art Fixer</h3>
+            <div class="meta"><span>tool</span></div>
+            <div class="desc">Takes AI-generated “pixel art” and turns it into actual pixel art.</div>
+          </div>
+        </a>
+
+        <a class="card" href="projects/chat-history-processor/">
+          <img class="thumb" src="./images/chat-history-processor.png" alt="Chat History Processor">
+          <div class="inner">
+            <h3 class="title">Chat History Processor</h3>
+            <div class="meta"><span>LLM</span></div>
+            <div class="desc">LLM summarization and tagging tool that processes a ChatGPT data export into a searchable database.</div>
+          </div>
+        </a>
+
+        <a class="card" href="projects/svg-icon-viewer/">
+          <img class="thumb" src="./images/svg-icon-viewer.png" alt="SVG Icon Viewer">
+          <div class="inner">
+            <h3 class="title">SVG Icon Viewer</h3>
+            <div class="meta"><span>tool</span></div>
+            <div class="desc">Collects my AI-generated SVG designs for easy use in simple arcade video games written by AI.</div>
+          </div>
+        </a>
+
+        <a class="card" href="projects/traders-starmap/">
+          <img class="thumb" src="./images/traders-starmap.png" alt="Trader's Starmap">
+          <div class="inner">
+            <h3 class="title">Trader’s Starmap</h3>
+            <div class="meta"><span>mockup</span></div>
+            <div class="desc">Mock-up of a starmap for a spacefaring trade captain in the game Endless Sky.</div>
+          </div>
+        </a>
+
+        <a class="card" href="projects/elemental-equations/">
+          <img class="thumb" src="./images/elemental-equations.png" alt="Elemental Equations">
+          <div class="inner">
+            <h3 class="title">Elemental Equations</h3>
+            <div class="meta"><span>LLM</span></div>
+            <div class="desc">LLM latent-space exploration I made before the Infinite-Craft game made it better.</div>
+          </div>
+        </a>
+
+        <a class="card" href="projects/orbital-mechanics-sim/">
+          <img class="thumb" src="./images/orbital-mechanics-sim.png" alt="Orbital Mechanics Sim">
+          <div class="inner">
+            <h3 class="title">Orbital Mechanics Sim</h3>
+            <div class="meta"><span>sim</span></div>
+            <div class="desc">Was going to be a small, silly game about shooting the moon, but turned into an orbital mechanics study.</div>
+          </div>
+        </a>
+
+        <a class="card" href="projects/program-the-robot/">
+          <img class="thumb" src="./images/program-the-robot.png" alt="Program the Robot">
+          <div class="inner">
+            <h3 class="title">Program the Robot</h3>
+            <div class="meta"><span>game</span></div>
+            <div class="desc">Basic kids’ programming game to move a robot on a grid, avoid obstacles, and return a flag.</div>
+          </div>
+        </a>
+
+        <a class="card" href="projects/n64-twitter-client/">
+          <img class="thumb" src="./images/n64-twitter-client.png" alt="N64 Twitter Client">
+          <div class="inner">
+            <h3 class="title">N64 Twitter Client</h3>
+            <div class="meta"><span>retro</span></div>
+            <div class="desc">What if you could browse Twitter on your N64 in the ’90s?</div>
+          </div>
+        </a>
+
+        <a class="card" href="projects/classic-games/">
+          <img class="thumb" src="./images/classic-games.png" alt="Classic Games collection">
+          <div class="inner">
+            <h3 class="title">Classic Games</h3>
+            <div class="meta"><span>collection</span></div>
+            <div class="desc">
+              Collection page with: 2-Player Farkle (modern gradient styling to play with my son), Yahtzee (modern gradient styling with persistent high score), Chess (tabletop sandbox for pass-and-play), Checkers (tabletop sandbox for pass-and-play), Connect-4 (simple 2-player with undo), Strategic Digits (place digits to form the largest number), Phone Unlock Screen (not that exciting; not even a game—why did I make this?).
+            </div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <!-- UNDER CONSTRUCTION -->
+    <section class="section" id="under-construction">
+      <h2>Under Construction</h2>
+      <div class="grid">
+        <a class="card uc" href="projects/llm-brainstorming-framework/">
+          <img class="thumb" src="./images/llm-brainstorming-framework.png" alt="LLM Brainstorming Framework">
+          <div class="inner">
+            <h3 class="title">LLM Brainstorming Framework</h3>
+            <div class="meta"><span>under construction</span></div>
+            <div class="desc">Framework for structured ideation with LLMs.</div>
+          </div>
+        </a>
+
+        <a class="card uc" href="projects/kingdoms-ccg-restored/">
+          <img class="thumb" src="./images/kingdoms-ccg-restored.png" alt="Kingdoms CCG Restored">
+          <div class="inner">
+            <h3 class="title">Kingdoms CCG Restored</h3>
+            <div class="meta"><span>under construction</span></div>
+            <div class="desc">Restoration project for a classic CCG.</div>
+          </div>
+        </a>
+
+        <a class="card uc" href="projects/medieval-kingdom/">
+          <img class="thumb" src="./images/medieval-kingdom.png" alt="Medieval Kingdom">
+          <div class="inner">
+            <h3 class="title">Medieval Kingdom</h3>
+            <div class="meta"><span>under construction</span></div>
+            <div class="desc">LLM-enabled point-and-click adventure demo.</div>
+          </div>
+        </a>
+      </div>
+    </section>
+
+    <footer>© <span id="y"></span> Your Name</footer>
   </div>
 
   <script>
@@ -178,5 +275,3 @@
   </script>
 </body>
 </html>
-
-
