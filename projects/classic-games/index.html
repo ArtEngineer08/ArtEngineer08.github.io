@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Classic Games — Collection</title>
+  <style>
+    :root { --max: 980px }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 28px; display:flex; justify-content:center }
+    .wrap { width:100%; max-width: var(--max) }
+    a { color: inherit; text-decoration: none }
+    header { margin-bottom: 8px }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px }
+    .card { display:block; border:1px solid #e8e8e8; border-radius:14px; overflow:hidden; transition: transform .06s ease, box-shadow .06s ease }
+    .card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.06) }
+    .thumb { aspect-ratio: 16/9; width:100%; object-fit: cover; background:#f6f6f6 }
+    .inner { padding:12px 14px }
+    .title { margin:0 0 6px; font-size: 18px; font-weight: 650 }
+    .meta { color:#666; font-size:12px }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <a href="../../">← Back to portfolio</a>
+      <h1>Classic Games</h1>
+      <p>Modern UI remakes & tabletop sandboxes.</p>
+    </header>
+
+    <section class="grid">
+      <a class="card" href="farkle/">
+        <img class="thumb" src="../../images/farkle.png" alt="2-Player Farkle">
+        <div class="inner"><h3 class="title">2-Player Farkle</h3><div class="meta">gradient styling</div></div>
+      </a>
+
+      <a class="card" href="yahtzee/">
+        <img class="thumb" src="../../images/yahtzee.png" alt="Yahtzee">
+        <div class="inner"><h3 class="title">Yahtzee</h3><div class="meta">persistent high score</div></div>
+      </a>
+
+      <a class="card" href="chess/">
+        <img class="thumb" src="../../images/chess.png" alt="Chess">
+        <div class="inner"><h3 class="title">Chess</h3><div class="meta">tabletop sandbox</div></div>
+      </a>
+
+      <a class="card" href="checkers/">
+        <img class="thumb" src="../../images/checkers.png" alt="Checkers">
+        <div class="inner"><h3 class="title">Checkers</h3><div class="meta">tabletop sandbox</div></div>
+      </a>
+
+      <a class="card" href="connect-4/">
+        <img class="thumb" src="../../images/connect-4.png" alt="Connect-4">
+        <div class="inner"><h3 class="title">Connect-4</h3><div class="meta">2-player + undo</div></div>
+      </a>
+
+      <a class="card" href="strategic-digits/">
+        <img class="thumb" src="../../images/strategic-digits.png" alt="Strategic Digits">
+        <div class="inner"><h3 class="title">Strategic Digits</h3><div class="meta">make the biggest number</div></div>
+      </a>
+
+      <a class="card" href="phone-unlock-screen/">
+        <img class="thumb" src="../../images/phone-unlock-screen.png" alt="Phone Unlock Screen">
+        <div class="inner"><h3 class="title">Phone Unlock Screen</h3><div class="meta">UI toy</div></div>
+      </a>
+    </section>
+  </div>
+</body>
+</html>
