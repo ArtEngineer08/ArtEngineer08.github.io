@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Dark-Mode Chess – Table-Top Sandbox</title>
+
+<!-- ─────────────────────────────
+     READABLE, COMMENTED CSS
+───────────────────────────── -->
+<style>
+/* ── CSS variables (theme) ───────────────────────── */
+:root {
+  /* core palette */
+  --clr-bg:           #0b0f14;
+  --clr-panel-1:      #121821;
+  --clr-panel-2:      #0e141c;
+  --clr-ink:          #eaf2ff;
+  --clr-muted:        #9bb0c9;
+  --clr-accent-1:     #5dd6ff;
+  --clr-accent-2:     #8b5cf6;
+
+  --clr-sq-light:     #2a3342;
+  --clr-sq-dark:      #1a2230;
+  --clr-sq-highlight: #2f3a4d;
+
+  --clr-piece-white:  #f2f5fb;
+  --clr-piece-black:  #354458;
+
+  /* misc */
+  --radius: 16px;
+  --shadow-floating:  0 25px 60px rgba(0,0,0,.6);
+  --shadow-panel:     0 10px 30px rgba(0,0,0,.5);
+  --shadow-inner:     inset 0 1px 0 rgba(255,255,255,.06),
+                      inset 0 -1px 0 rgba(0,0,0,.5),
+                      0 8px 20px rgba(0,0,0,.35);
+}
+
+/* ── Global reset ─────────────────────────────────── */
+*        { box-sizing: border-box; }
+html,body { height: 100%; }
+body {
+  margin: 0;
+  color: var(--clr-ink);
+  font: 15px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Inter,
+        "Helvetica Neue", Arial, sans-serif;
+
+  /* subtle space-nebula background */
+  background:
+    radial-gradient(1200px 800px at  10% -10%, #16202d  0%, transparent 60%),
+    radial-gradient(1200px 800px at 110% 110%, #171f2a 0%, transparent 60%),
+    var(--clr-bg);
+}
+
+/* ── App shell ────────────────────────────────────── */
+.app {
+  max-width: 1200px;
+  margin: clamp(12px, 4vmin, 24px) auto;
+  padding: clamp(12px, 2vmin, 24px);
+  background: linear-gradient(180deg, var(--clr-panel-1), var(--clr-panel-2));
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--shadow-panel);
+}
+
+/* ── Header & toolbar ─────────────────────────────── */
+header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.badge {
+  font-size: 12px;
+  color: var(--clr-muted);
+  background: rgba(255,255,255,.04);
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.06);
+  backdrop-filter: blur(6px);
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+button, .toggle {
+  appearance: none;
+  cursor: pointer;
+  padding: 10px 14px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  color: var(--clr-ink);
+  background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.3));
+  box-shadow: var(--shadow-inner);
+  transition: transform .08s ease, box-shadow .2s ease;
+}
+button:hover, .toggle:hover   { transform: translateY(-1px); }
+button:active, .toggle:active { transform: translateY(0) scale(.98); }
+
+.toggle      { display: inline-flex; align-items: center; gap: 10px; }
+.toggle .dot {
+  width: 10px; height: 10px; border-radius: 999px;
+  background: var(--clr-accent-1);
+  box-shadow: 0 0 12px var(--clr-accent-1);
+}
+.toggle .dot.off { background: #45566e; box-shadow: none; }
+
+/* ── Main 3-column layout (tray – board – tray) ───── */
+.play-area {
+  position: relative;
+  isolation: isolate;               /* allows absolute children to sit above */
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: clamp(10px, 2vmin, 18px);
+  align-items: start;
+}
+
+/* ── Board wrapper ────────────────────────────────── */
+.board-wrap {
+  grid-column: 2;
+  display: grid;
+  place-items: center;
+  padding: clamp(8px, 1.5vmin, 14px);
+  background:
+    radial-gradient(120% 140% at 50% -20%,
+      rgba(93,214,255,.08), rgba(139,92,246,.06) 48%, transparent 52%),
+    linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.4));
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-panel);
+}
+.board {
+  position: relative;
+  width: min(80vmin, 640px);
+  aspect-ratio: 1 / 1;
+  border-radius: calc(var(--radius) - 6px);
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.08);
+  box-shadow: var(--shadow-floating);
+}
+
+/* ── Board squares ────────────────────────────────── */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(8,1fr);
+  grid-template-rows:    repeat(8,1fr);
+  width:  100%;
+  height: 100%;
+  background: var(--clr-sq-dark);
+}
+.cell {
+  position: relative;
+  background: var(--clr-sq-light);
+}
+.cell.dark { background: var(--clr-sq-dark); }
+.cell::after {                                 /* subtle inner gloss */
+  content: '';
+  position: absolute; inset: 0;
+  background: radial-gradient(120% 90% at 50% -10%,
+               rgba(255,255,255,.06), transparent 50%);
+  pointer-events: none;
+}
+.cell.highlight {
+  outline: 2px dashed rgba(255,255,255,.15);
+  outline-offset: -4px;
+  background: var(--clr-sq-highlight);
+}
+
+/* ── Side trays (captured / spare pieces) ─────────── */
+.tray {
+  min-height: min(80vmin, 640px);
+  padding: 12px;
+  border: 1px dashed rgba(255,255,255,.12);
+  border-radius: var(--radius);
+  background: linear-gradient(180deg,
+               rgba(255,255,255,.04), rgba(0,0,0,.35));
+  box-shadow: var(--shadow-panel);
+}
+.tray h3   { margin: 0 0 8px; font-size: 13px; color: var(--clr-muted); }
+.tray .hint {
+  font-size: 12px;
+  color: var(--clr-muted);
+  opacity: 0.8;
+  margin-bottom: 6px;
+}
+
+/* ── Token layer (absolute-positioned pieces) ─────── */
+.tokens {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;       /* children re-enable */
+}
+
+/* ── Piece styling ────────────────────────────────── */
+.piece {
+  position: absolute;
+  width:  clamp(44px, 9vmin, 64px);
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  display: grid; place-items: center;
+
+  transform: translate(-50%, -50%); /* we position by centre */
+  cursor: grab;                     /* switches to grabbing on drag */
+
+  pointer-events: auto;
+  user-select: none;
+  touch-action: none;
+
+  background:
+    radial-gradient(120% 120% at 30% 30%,
+      rgba(255,255,255,.25), transparent 50%),
+    radial-gradient(120% 120% at 70% 70%,
+      rgba(0,0,0,.35),       transparent 40%),
+    linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.45));
+  border: 1px solid rgba(255,255,255,.12);
+  box-shadow: var(--shadow-inner), 0 18px 40px rgba(0,0,0,.5);
+}
+.piece.white { background-color: var(--clr-piece-white); color: #0e1622; }
+.piece.black { background-color: var(--clr-piece-black); color: #f6fbff; }
+.piece:active { cursor: grabbing; }
+
+.piece.held { outline: 2px solid var(--clr-accent-1); } /* visual cue when “on mouse” */
+
+.glyph {
+  font-size: clamp(28px, 6.2vmin, 44px);
+  line-height: 1;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,.35));
+}
+
+/* ── Board co-ordinates (ranks / files) ───────────── */
+.labels { position: absolute; inset: 0; pointer-events: none;
+          font-size: 12px; color: var(--clr-muted); }
+.rank, .file { position: absolute; opacity: .85; }
+.rank { left: 4px; }
+.file { top:  4px; }
+
+/* ── Helper text ──────────────────────────────────── */
+.helper {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--clr-muted);
+}
+.helper code {
+  color: var(--clr-ink);
+  background: rgba(255,255,255,.06);
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+/* ── Responsive: collapse to single column on small screens */
+@media (max-width: 980px) {
+  .play-area { grid-template-columns: 1fr; }
+  .board-wrap { grid-column: 1; }
+  .tray { min-height: auto; }
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- ── HEADER ─────────────────────────────────────── -->
+<header>
+  <div class="title">
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M4 19h16M5 19l3-10h8l3 10M9 9l3-4 3 4"
+            stroke="url(#grad)" stroke-width="1.6" stroke-linecap="round"
+            stroke-linejoin="round"/>
+      <defs>
+        <linearGradient id="grad" x1="0"   y1="0"
+                                      x2="24" y2="24"
+                        gradientUnits="userSpaceOnUse">
+          <stop stop-color="#5dd6ff"/><stop offset="1" stop-color="#8b5cf6"/>
+        </linearGradient>
+      </defs>
+    </svg>
+    <h1 style="margin:0;font-size:18px;letter-spacing:.3px;">Chess – Table-Top Sandbox</h1>
+    <span class="badge">Dark • Stylised • No Rules Engine</span>
+  </div>
+
+  <div class="toolbar">
+    <button id="startBtn">Start Position</button>
+    <button id="emptyBtn">Empty Board</button>
+    <button id="sparesBtn">Spawn Spares</button>
+    <button id="resetBtn">Reset All</button>
+
+    <span class="toggle" id="snapToggle" role="switch" aria-checked="true" tabindex="0">
+      <span class="dot" id="snapDot"></span> Snap to squares
+    </span>
+  </div>
+</header>
+
+<!-- ── MAIN AREA ──────────────────────────────────── -->
+<div class="play-area" id="playArea">
+  <div class="tray" id="trayLeft">
+    <h3>Tray A (White)</h3>
+    <div class="hint">Drop captured white pieces here.</div>
+  </div>
+
+  <div class="board-wrap">
+    <div class="board" id="board">
+      <div class="grid"   id="grid"></div>
+      <div class="labels" id="labels"></div>
+    </div>
+    <div class="helper">
+      Left-click: pick / drop • Drag: move • Right-click (off-board): cycle type, Alt + R-click: flip colour • Shift: bypass snap
+    </div>
+  </div>
+
+  <div class="tray" id="trayRight">
+    <h3>Tray B (Black)</h3>
+    <div class="hint">Use “Spawn Spares” for extra queens, etc.</div>
+  </div>
+
+  <!-- absolute token layer -->
+  <div class="tokens" id="tokensLayer"></div>
+</div>
+</div>
+
+<!-- ─────────────────────────────
+     JAVASCRIPT  (game logic)
+───────────────────────────── -->
+<script>
+(() => {
+  /* ── DOM short-cuts ───────────────────────────── */
+  const playArea   = document.getElementById('playArea');
+  const board      = document.getElementById('board');
+  const grid       = document.getElementById('grid');
+  const labels     = document.getElementById('labels');
+  const tokens     = document.getElementById('tokensLayer');
+  const trayLeft   = document.getElementById('trayLeft');
+  const trayRight  = document.getElementById('trayRight');
+
+  const btnStart   = document.getElementById('startBtn');
+  const btnEmpty   = document.getElementById('emptyBtn');
+  const btnSpares  = document.getElementById('sparesBtn');
+  const btnReset   = document.getElementById('resetBtn');
+  const snapToggle = document.getElementById('snapToggle');
+  const snapDot    = document.getElementById('snapDot');
+
+  /* ── Constants ────────────────────────────────── */
+  const FILES  = 'ABCDEFGH'.split('');
+  const RANKS  = '87654321'.split('');
+  const GLYPHS = {
+    white: { K:'♔', Q:'♕', R:'♖', B:'♗', N:'♘', P:'♙' },
+    black: { K:'♚', Q:'♛', R:'♜', B:'♝', N:'♞', P:'♟' }
+  };
+  const CYCLE  = ['P','N','B','R','Q','K'];
+
+  /* ── State ───────────────────────────────────── */
+  let SNAP_ENABLED = true;
+  let zTop         = 10;                 /* z-index stack */
+  let heldPiece    = null;               /* piece currently “on the mouse” */
+  let followMove   = null;               /* pointer-move handler while holding */
+
+  /* ── Utility: geometry helpers ────────────────── */
+  const clamp = (v,min,max) => Math.max(min, Math.min(max, v));
+
+  const rects = () => ({
+    area  : playArea.getBoundingClientRect(),
+    board : board.getBoundingClientRect()
+  });
+
+  const setCenter = (el, x, y) => {
+    el.style.left = `${x}px`;
+    el.style.top  = `${y}px`;
+  };
+
+  const getCenter = (el) => ({
+    x: parseFloat(el.style.left),
+    y: parseFloat(el.style.top)
+  });
+
+  const isOnBoard = (el) => {
+    const { area, board: b } = rects();
+    const c   = getCenter(el);
+    const abs = { x: area.left + c.x, y: area.top + c.y };
+    return abs.x >= b.left && abs.x <= b.right &&
+           abs.y >= b.top  && abs.y <= b.bottom;
+  };
+
+  const centerOf = (el) => {
+    const { area } = rects();
+    const r = el.getBoundingClientRect();
+    return {
+      x: (r.left - area.left) + r.width  / 2,
+      y: (r.top  - area.top ) + r.height / 2
+    };
+  };
+
+  const squareCenter = (row, col) => {
+    const { area, board: b } = rects();
+    const size = b.width / 8;
+    return {
+      x: (col + .5) * size + (b.left - area.left),
+      y: (row + .5) * size + (b.top  - area.top )
+    };
+  };
+
+  /* ── Highlight cell under cursor ─────────────── */
+  const clearHighlights = () =>
+    [...grid.children].forEach(c => c.classList.remove('highlight'));
+
+  const highlightAt = (x, y) => {
+    const { area, board: b } = rects();
+    const abs = { x: area.left + x, y: area.top + y };
+    if (abs.x < b.left || abs.x > b.right || abs.y < b.top || abs.y > b.bottom) {
+      clearHighlights(); return;
+    }
+    const size = b.width / 8;
+    const col  = Math.floor((abs.x - b.left) / size);
+    const row  = Math.floor((abs.y - b.top ) / size);
+    const idx  = row * 8 + col;
+    [...grid.children].forEach((c,i)=>c.classList.toggle('highlight', i===idx));
+  };
+
+  /* ── Piece factory ───────────────────────────── */
+  function createPiece(color = 'white', type = 'P', at = null) {
+    const piece      = document.createElement('div');
+    piece.className  = `piece ${color}`;
+    piece.dataset.color = color;
+    piece.dataset.type  = type;
+    piece.style.zIndex  = ++zTop;
+
+    /* glyph */
+    const glyph = document.createElement('div');
+    glyph.className  = 'glyph';
+    glyph.textContent = GLYPHS[color][type];
+    piece.appendChild(glyph);
+
+    tokens.appendChild(piece);
+    if (at) setCenter(piece, at.x, at.y);
+    else    setCenter(piece, 50, 50);
+
+    attachPieceBehaviours(piece);
+    return piece;
+  }
+
+  /* ── Right-click helpers (only off-board) ─────── */
+  const cycleType = (piece) => {
+    const idx  = CYCLE.indexOf(piece.dataset.type);
+    const next = CYCLE[(idx + 1) % CYCLE.length];
+    piece.dataset.type = next;
+    piece.querySelector('.glyph').textContent =
+      GLYPHS[piece.dataset.color][next];
+  };
+
+  const toggleColor = (piece) => {
+    const newColor = piece.dataset.color === 'white' ? 'black' : 'white';
+    piece.dataset.color = newColor;
+    piece.classList.toggle('white');
+    piece.classList.toggle('black');
+    piece.querySelector('.glyph').textContent =
+      GLYPHS[newColor][piece.dataset.type];
+  };
+
+  /* ── Drag behaviour (pointer events) ──────────── */
+  function attachPieceBehaviours(piece) {
+    let pid       = null;      /* pointer id during drag          */
+    let offsetX   = 0;         /* cursor -> centre offset         */
+    let offsetY   = 0;
+    let moved     = false;     /* track if drag actually moved    */
+
+    /* click-to-pick (only when the piece hasn’t moved) */
+	piece.addEventListener('click', (e) => {
+	  /* ignore the first click after a drop */
+	  if (piece.dataset.ignoreNextClick) {
+		delete piece.dataset.ignoreNextClick;   // consume flag
+		return;                                 // do nothing
+	  }
+
+	  /* ignore click that follows a drag */
+	  if (moved) { moved = false; return; }
+
+	  /* ignore if another piece is already held */
+	  if (heldPiece) return;
+
+	  e.stopPropagation();                      // keep global handler from firing
+	  pickUp(piece, e.clientX, e.clientY);
+	});
+
+
+    /* right-click cycle / flip when off-board */
+    piece.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      if (isOnBoard(piece)) return;              /* guard: only off the board */
+      if (e.altKey) toggleColor(piece);
+      else          cycleType(piece);
+    });
+
+    /* pointer-drag */
+    const onDown = (e) => {
+      if (e.button !== 0 || heldPiece) return;   /* ignore non-left or when holding */
+      pid = e.pointerId;
+      piece.setPointerCapture(pid);
+      piece.style.zIndex = ++zTop;
+
+      const rect = piece.getBoundingClientRect();
+      offsetX = e.clientX - rect.left - rect.width  / 2;
+      offsetY = e.clientY - rect.top  - rect.height / 2;
+      moved   = false;
+    };
+
+    const onMove = (e) => {
+      if (e.pointerId !== pid) return;
+      const { area } = rects();
+      const x = clamp(e.clientX - area.left - offsetX, 0, area.width );
+      const y = clamp(e.clientY - area.top  - offsetY, 0, area.height);
+      setCenter(piece, x, y);
+      highlightAt(x, y);
+      moved = true;
+    };
+
+    const onUp = (e) => {
+      if (e.pointerId !== pid) return;
+      piece.releasePointerCapture(pid);
+      pid = null;
+      clearHighlights();
+
+      if (moved) {                 /* true drag completed – perform snap */
+        snapPiece(piece, !e.shiftKey);
+      }
+    };
+
+    piece.addEventListener('pointerdown',  onDown);
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup',   onUp);
+    window.addEventListener('pointercancel', onUp);
+  }
+
+  /* ── Click-to-pick / click-to-drop helpers ─────── */
+  function pickUp(piece, clientX, clientY) {
+    heldPiece = piece;
+    piece.classList.add('held');
+    piece.style.zIndex = ++zTop;
+
+    /* start following the cursor */
+    followMove = (ev) => {
+      const { area } = rects();
+      const x = clamp(ev.clientX - area.left, 0, area.width );
+      const y = clamp(ev.clientY - area.top , 0, area.height);
+      setCenter(piece, x, y);
+      highlightAt(x, y);
+    };
+    document.addEventListener('pointermove', followMove);
+
+    /* immediately set to current cursor */
+    followMove({ clientX, clientY });
+  }
+
+  function dropHeldPiece(clientX, clientY) {
+	  if (!heldPiece) return;
+	  const piece = heldPiece;
+	  heldPiece   = null;
+
+	  /* stop following */
+	  document.removeEventListener('pointermove', followMove);
+	  followMove = null;
+
+	  /* final position at cursor */
+	  const { area } = rects();
+	  const x = clamp(clientX - area.left, 0, area.width );
+	  const y = clamp(clientY - area.top , 0, area.height);
+	  setCenter(piece, x, y);
+
+	  /* mark this piece so the very next click is ignored */
+	  piece.dataset.ignoreNextClick = '1';
+
+	  /* tidy visuals */
+	  piece.classList.remove('held');
+	  clearHighlights();
+
+	  /* snap & collision */
+	  snapPiece(piece, true);
+	}
+
+
+  /* global click == drop if holding */
+  playArea.addEventListener('pointerdown', (e) => {
+    if (heldPiece) {
+      dropHeldPiece(e.clientX, e.clientY);
+      e.stopPropagation();         /* don’t start a new drag immediately */
+    }
+  }, true); /* capture - drop happens before underlying piece sees the event */
+
+  /* ── Snap-to-square & collision resolution ─────── */
+  function snapPiece(piece, doSnap = true) {
+    if (!SNAP_ENABLED || !doSnap) return;
+
+    const { area, board: b } = rects();
+    const c   = getCenter(piece);
+    const abs = { x: area.left + c.x, y: area.top + c.y };
+    if (abs.x < b.left || abs.x > b.right || abs.y < b.top || abs.y > b.bottom) return;
+
+    const size = b.width / 8;
+    const col  = Math.floor((abs.x - b.left) / size);
+    const row  = Math.floor((abs.y - b.top ) / size);
+
+    const snapX = (col + .5) * size + (b.left - area.left);
+    const snapY = (row + .5) * size + (b.top  - area.top );
+    setCenter(piece, snapX, snapY);
+
+    resolveCollision(row, col, piece);
+  }
+
+  /* if a square is already occupied, eject the old piece to a tray */
+  function resolveCollision(row, col, movedPiece) {
+    const { area, board: b } = rects();
+    const size = b.width / 8;
+
+    [...tokens.querySelectorAll('.piece')].forEach(other => {
+      if (other === movedPiece) return;
+
+      const c   = getCenter(other);
+      const abs = { x: area.left + c.x, y: area.top + c.y };
+      const col2 = Math.floor((abs.x - b.left) / size);
+      const row2 = Math.floor((abs.y - b.top ) / size);
+
+      if (row2 === row && col2 === col) {
+        /* eject to random tray area */
+        const tray = Math.random() < .5 ? trayLeft : trayRight;
+        const base = centerOf(tray);
+        const nx   = base.x + (Math.random() * 120 - 60);
+        const ny   = base.y + (Math.random() * 120 - 60);
+        setCenter(other, nx, ny);
+        clearHighlights();
+      }
+    });
+  }
+
+  /* ── Board & label construction ───────────────── */
+  (function buildGridAndLabels() {
+    /* squares */
+    for (let r = 0; r < 8; r++) {
+      for (let c = 0; c < 8; c++) {
+        const cell = document.createElement('div');
+        cell.className = 'cell' + (((r + c) % 2) ? ' dark' : '');
+        grid.appendChild(cell);
+      }
+    }
+
+    /* coordinates */
+    const renderLabels = () => {
+      labels.innerHTML = '';
+      const b = board.getBoundingClientRect();
+
+      for (let i = 0; i < 8; i++) {
+        /* files (bottom) */
+        const f = document.createElement('div');
+        f.className  = 'file';
+        f.textContent = FILES[i];
+        f.style.left  = `${((i + .5) / 8) * 100}%`;
+        f.style.bottom = '4px';
+        f.style.transform = 'translateX(-50%)';
+        labels.appendChild(f);
+
+        /* ranks (left) */
+        const r = document.createElement('div');
+        r.className  = 'rank';
+        r.textContent = RANKS[i];
+        r.style.top   = `${((i + .5) / 8) * 100}%`;
+        r.style.transform = 'translateY(-50%)';
+        labels.appendChild(r);
+      }
+    };
+    renderLabels();
+    window.addEventListener('resize', renderLabels);
+  })();
+
+  /* ── Setups & shortcuts ───────────────────────── */
+  const clearPieces = () => [...tokens.children].forEach(n => n.remove());
+
+  function startPosition() {
+    clearPieces();
+    /* pawns */
+    for (let c = 0; c < 8; c++) {
+      createPiece('white', 'P', squareCenter(6, c));
+      createPiece('black', 'P', squareCenter(1, c));
+    }
+    /* main pieces */
+    const back = ['R','N','B','Q','K','B','N','R'];
+    for (let c = 0; c < 8; c++) {
+      createPiece('white', back[c], squareCenter(7, c));
+      createPiece('black', back[c], squareCenter(0, c));
+    }
+  }
+
+  function spawnSpares() {
+    const left  = centerOf(trayLeft);
+    const right = centerOf(trayRight);
+    const dx = 54, dy = 60;
+    const spare = ['Q','Q','R','B','N','P','P'];
+
+    spare.forEach((t,i) => {
+      const col = i % 2, row = Math.floor(i / 2);
+      createPiece('white', t, {
+        x: left.x  - dx + col * dx * 2,
+        y: left.y  - 120 + row * dy
+      });
+      createPiece('black', t, {
+        x: right.x - dx + col * dx * 2,
+        y: right.y - 120 + row * dy
+      });
+    });
+  }
+
+  /* ── Controls ─────────────────────────────────── */
+  btnStart.onclick = startPosition;
+  btnEmpty.onclick = clearPieces;
+  btnSpares.onclick= spawnSpares;
+  btnReset.onclick = () => { clearPieces(); startPosition(); spawnSpares(); };
+
+  const setSnap = (on) => {
+    SNAP_ENABLED = !!on;
+    snapToggle.setAttribute('aria-checked', on);
+    snapDot.classList.toggle('off', !on);
+  };
+  snapToggle.onclick = () => setSnap(!SNAP_ENABLED);
+  snapToggle.onkeydown = (e) => {
+    if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); setSnap(!SNAP_ENABLED); }
+  };
+
+  /* ── Boot sequence ────────────────────────────── */
+  setSnap(true);
+  startPosition();
+  spawnSpares();
+})();
+</script>
+</body>
+</html>
