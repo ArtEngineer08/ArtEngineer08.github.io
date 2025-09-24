@@ -1,0 +1,50 @@
+/ (repo root)
+  index.html                              ← main table of contents
+  /images/                                 ← all thumbnails (PNG/JPG)
+    skyward-blob.png
+    space-opoly.png
+    pixel-art-fixer.png
+    chat-history-processor.png
+    svg-icon-viewer.png
+    traders-starmap.png
+    elemental-equations.png
+    orbital-mechanics-sim.png
+    program-the-robot.png
+    n64-twitter-client.png
+    llm-brainstorming-framework.png
+    kingdoms-ccg-restored.png
+    medieval-kingdom.png
+    classic-games.png
+
+    // classic games previews:
+    farkle.png
+    yahtzee.png
+    chess.png
+    checkers.png
+    connect-4.png
+    strategic-digits.png
+    phone-unlock-screen.png
+
+  /projects/
+    /skyward-blob/                index.html (your project page)
+    /space-opoly/                 index.html
+    /pixel-art-fixer/             index.html
+    /chat-history-processor/      index.html
+    /svg-icon-viewer/             index.html
+    /traders-starmap/             index.html
+    /elemental-equations/         index.html
+    /orbital-mechanics-sim/       index.html
+    /program-the-robot/           index.html
+    /n64-twitter-client/          index.html
+    /llm-brainstorming-framework/ index.html
+    /kingdoms-ccg-restored/       index.html
+    /medieval-kingdom/            index.html
+
+    /classic-games/               index.html  ← collection page
+      /farkle/                    index.html  ← (optional subpage)
+      /yahtzee/                   index.html
+      /chess/                     index.html
+      /checkers/                  index.html
+      /connect-4/                 index.html
+      /strategic-digits/          index.html
+      /phone-unlock-screen/       index.html
