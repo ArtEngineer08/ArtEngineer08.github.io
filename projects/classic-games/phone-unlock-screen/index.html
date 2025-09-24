@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phone Lock Screen</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(to bottom, #222 0%, #333 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #fff;
+    }
+    .phone {
+      width: 300px;
+      height: 550px;
+      background: transparent;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    /* Screen/prompt area */
+    .prompt {
+      margin-top: 60px;
+      font-size: 18px;
+      text-align: center;
+      opacity: 0.9;
+    }
+    .passcode-dots {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+      margin-bottom: 40px;
+    }
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #999;
+      margin: 0 8px;
+    }
+    .filled {
+      background: #fff;
+    }
+    /* Keypad layout */
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-gap: 15px;
+      padding: 0 30px;
+      position: relative;
+      touch-action: none;
+    }
+    .key {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 70px;
+      height: 70px;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      user-select: none;
+      transition: background 0.1s, transform 0.1s;
+    }
+    .key:active {
+      background: rgba(255, 255, 255, 0.2);
+      transform: scale(0.95);
+    }
+    .number {
+      font-size: 22px;
+      line-height: 1;
+      margin-bottom: 2px;
+    }
+    .letters {
+      font-size: 10px;
+      line-height: 1;
+      opacity: 0.7;
+    }
+    /* Canvas overlay for drawing the swipe path */
+    #patternCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    /* Incorrect Toast at the bottom */
+    #incorrectToast {
+      position: absolute;
+      left: 50%;
+      bottom: -80px;
+      transform: translateX(-50%) scale(0.8);
+      padding: 15px 90px;
+      border-radius: 20px;
+      color: #fff;
+      background-color: #dc3545;
+      opacity: 0;
+      transition: bottom 0.4s, opacity 0.4s, transform 0.4s;
+      pointer-events: none;
+    }
+    #incorrectToast.show {
+      bottom: 10px;
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+    /* Unlock Button drops down from the top */
+    #correctButton {
+      position: absolute;
+      top: -80px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.8);
+      font-size: 24px;
+      padding: 15px 90px;
+      border-radius: 20px;
+      color: #fff;
+      background-color: #28a745;
+      opacity: 0;
+      transition: top 0.4s, opacity 0.4s, transform 0.4s;
+      cursor: pointer;
+      border: none;
+    }
+    #correctButton.show {
+      top: 20px;
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+    /* Set New Password Button styling */
+    #setNewPasswordButton {
+      position: absolute;
+      top: 80px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.8);
+      font-size: 18px;
+      padding: 10px 20px;
+      border-radius: 10px;
+      color: #fff;
+      background-color: #007bff;
+      opacity: 0;
+      transition: top 0.4s, opacity 0.4s, transform 0.4s;
+      cursor: pointer;
+      border: none;
+    }
+    #setNewPasswordButton.show {
+      opacity: 1;
+      transform: translateX(-50%) scale(1);
+    }
+  </style>
+</head>
+<body>
+  <div class="phone">
+    <div class="prompt">Enter Passcode</div>
+    <div class="passcode-dots">
+      <div class="dot" id="dot1"></div>
+      <div class="dot" id="dot2"></div>
+      <div class="dot" id="dot3"></div>
+      <div class="dot" id="dot4"></div>
+    </div>
+    <div class="keypad">
+      <!-- Canvas overlay for drawing the swipe path -->
+      <canvas id="patternCanvas"></canvas>
+      <!-- Row 1 -->
+      <div class="key" data-key="1">
+        <div class="number">1</div>
+        <div class="letters">&nbsp;</div>
+      </div>
+      <div class="key" data-key="2">
+        <div class="number">2</div>
+        <div class="letters">ABC</div>
+      </div>
+      <div class="key" data-key="3">
+        <div class="number">3</div>
+        <div class="letters">DEF</div>
+      </div>
+      <!-- Row 2 -->
+      <div class="key" data-key="4">
+        <div class="number">4</div>
+        <div class="letters">GHI</div>
+      </div>
+      <div class="key" data-key="5">
+        <div class="number">5</div>
+        <div class="letters">JKL</div>
+      </div>
+      <div class="key" data-key="6">
+        <div class="number">6</div>
+        <div class="letters">MNO</div>
+      </div>
+      <!-- Row 3 -->
+      <div class="key" data-key="7">
+        <div class="number">7</div>
+        <div class="letters">PQRS</div>
+      </div>
+      <div class="key" data-key="8">
+        <div class="number">8</div>
+        <div class="letters">TUV</div>
+      </div>
+      <div class="key" data-key="9">
+        <div class="number">9</div>
+        <div class="letters">WXYZ</div>
+      </div>
+      <!-- Row 4 -->
+      <div></div>
+      <div class="key" data-key="0">
+        <div class="number">0</div>
+        <div class="letters">&nbsp;</div>
+      </div>
+      <div></div>
+    </div>
+    <!-- Unlock Button -->
+    <button id="correctButton">Unlock</button>
+    <!-- Set New Password Button -->
+    <button id="setNewPasswordButton">Set New Password</button>
+    <!-- Incorrect Toast at bottom -->
+    <div id="incorrectToast">Incorrect!</div>
+  </div>
+
+  <script>
+    // The current passcode (can be updated)
+    let correctCode = "4541";
+    let isSettingNewPassword = false;
+    let input = "";
+    let isDrawing = false;
+    let codeComplete = false;  // True when 4 digits are entered
+    let allowDrawing = true;
+    let gestureEnded = false;
+    let toastFinished = false;
+    let codeCorrect = false;
+    let toastTimer;
+    let patternPoints = [];
+
+    // Setup canvas and context
+    const canvas = document.getElementById("patternCanvas");
+    const keypad = document.querySelector('.keypad');
+    const ctx = canvas.getContext("2d");
+
+    // Resize canvas to match keypad dimensions
+    function resizeCanvas() {
+      canvas.width = keypad.offsetWidth;
+      canvas.height = keypad.offsetHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function updateDots() {
+      for (let i = 1; i <= 4; i++) {
+        const dot = document.getElementById("dot" + i);
+        if (i <= input.length) {
+          dot.classList.add("filled");
+        } else {
+          dot.classList.remove("filled");
+        }
+      }
+    }
+
+    function clearCanvas() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    // Draw the freeform swipe path
+    function drawPattern() {
+      clearCanvas();
+      if (patternPoints.length === 0) return;
+      ctx.beginPath();
+      ctx.strokeStyle = "#6495ED"; // CornflowerBlue
+      ctx.lineWidth = 20;
+      ctx.lineCap = "round";
+      ctx.moveTo(patternPoints[0].x, patternPoints[0].y);
+      for (let i = 1; i < patternPoints.length; i++) {
+        ctx.lineTo(patternPoints[i].x, patternPoints[i].y);
+      }
+      ctx.stroke();
+    }
+
+    // Show the Unlock and Set New Password buttons
+    function showCorrectButton() {
+      const unlockButton = document.getElementById("correctButton");
+      const setPassButton = document.getElementById("setNewPasswordButton");
+      unlockButton.classList.add("show");
+      setPassButton.classList.add("show");
+
+      // When clicking Unlock, play a sound (for fun)
+      unlockButton.addEventListener("click", function() {
+        const audio = new Audio('https://www.myinstants.com/media/sounds/fart.mp3');
+        audio.play();
+      });
+    }
+
+    function showIncorrectToast() {
+      const toast = document.getElementById("incorrectToast");
+      toast.classList.add("show");
+      setTimeout(() => {
+        toast.classList.remove("show");
+      }, 1000);
+    }
+
+    // When the toast ends, reset drawing if needed
+    function onToastEnd() {
+      toastFinished = true;
+      allowDrawing = false;
+      if (!codeCorrect && !isSettingNewPassword) {
+        patternPoints = [];
+        clearCanvas();
+      }
+      if (gestureEnded) {
+        finalReset();
+      }
+    }
+
+    // Reset state for a new gesture
+    function finalReset() {
+      codeComplete = false;
+      allowDrawing = true;
+      gestureEnded = false;
+      toastFinished = false;
+      input = "";
+      updateDots();
+      patternPoints = [];
+      clearCanvas();
+    }
+
+    // When 4 digits are entered, check the code or set a new passcode
+    function checkCode() {
+      if (isSettingNewPassword) {
+        correctCode = input;
+        alert("New passcode set: " + correctCode);
+        isSettingNewPassword = false;
+        finalReset();
+        document.getElementById("correctButton").classList.remove("show");
+        document.getElementById("setNewPasswordButton").classList.remove("show");
+      } else {
+        codeCorrect = (input === correctCode);
+        if (codeCorrect) {
+          showCorrectButton();
+        } else {
+          showIncorrectToast();
+        }
+        toastTimer = setTimeout(onToastEnd, 1000);
+      }
+    }
+
+    // Register a key if under 4 digits
+    function tryRegisterKey(e) {
+      if (input.length < 4) {
+        const keyElement = document.elementFromPoint(e.clientX, e.clientY)?.closest('.key');
+        if (keyElement) {
+          const value = keyElement.getAttribute('data-key');
+          if (input === "" || input.slice(-1) !== value) {
+            input += value;
+            updateDots();
+            if (input.length === 4 && !codeComplete) {
+              codeComplete = true;
+              checkCode();
+            }
+          }
+        }
+      }
+    }
+
+    // Start the swipe gesture
+    keypad.addEventListener('pointerdown', function(e) {
+      if (codeComplete) return;
+      isDrawing = true;
+      gestureEnded = false;
+      const rect = canvas.getBoundingClientRect();
+      const pointerX = e.clientX - rect.left;
+      const pointerY = e.clientY - rect.top;
+      patternPoints.push({ x: pointerX, y: pointerY });
+      drawPattern();
+
+      const keyElement = e.target.closest('.key');
+      if (keyElement && input.length < 4) {
+        const value = keyElement.getAttribute('data-key');
+        if (input === "" || input.slice(-1) !== value) {
+          input += value;
+          updateDots();
+          if (input.length === 4 && !codeComplete) {
+            codeComplete = true;
+            checkCode();
+          }
+        }
+      }
+    });
+
+    // Continue tracking the gesture
+    keypad.addEventListener('pointermove', function(e) {
+      if (!isDrawing) return;
+      const rect = canvas.getBoundingClientRect();
+      if (allowDrawing) {
+        const pointerX = e.clientX - rect.left;
+        const pointerY = e.clientY - rect.top;
+        patternPoints.push({ x: pointerX, y: pointerY });
+        drawPattern();
+      }
+      if (!codeComplete) {
+        tryRegisterKey(e);
+      }
+    });
+
+    // End the gesture
+    keypad.addEventListener('pointerup', function(e) {
+      gestureEnded = true;
+      isDrawing = false;
+      if (codeComplete && toastFinished) {
+        finalReset();
+      }
+      if (!codeComplete) {
+        setTimeout(() => {
+          input = "";
+          updateDots();
+          patternPoints = [];
+          clearCanvas();
+        }, 500);
+      }
+    });
+
+    keypad.addEventListener('pointercancel', function(e) {
+      isDrawing = false;
+      input = "";
+      updateDots();
+      patternPoints = [];
+      clearCanvas();
+      codeComplete = false;
+      allowDrawing = true;
+      gestureEnded = false;
+      toastFinished = false;
+    });
+
+    // Event listener for the Set New Password button.
+    document.getElementById("setNewPasswordButton").addEventListener("click", function() {
+      isSettingNewPassword = true;
+      alert("Enter your new 4-digit passcode by drawing on the keypad.");
+      document.getElementById("correctButton").classList.remove("show");
+      document.getElementById("setNewPasswordButton").classList.remove("show");
+      input = "";
+      updateDots();
+    });
+  </script>
+</body>
+</html>
