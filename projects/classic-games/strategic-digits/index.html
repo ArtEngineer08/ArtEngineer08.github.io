@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Strategic Digits</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        /* Dark mode changes */
+        .dark-mode {
+            background-color: #333;
+            color: #fff;
+        }
+        .dark-mode .game-container {
+            background: #444;
+        }
+        .dark-mode .slot,
+        .dark-mode .current-digit-display {
+            border-color: #fff;
+            color: #000; /* Ensure digits remain black in dark mode */
+        }
+        
+        .game-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: inline-block;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            position: relative; /* for positioning the dark-mode toggle */
+        }
+        .slots {
+            display: flex;
+            justify-content: center;
+            margin: 20px;
+            gap: 10px;
+        }
+        .slot, .current-digit-display {
+            width: 60px;
+            height: 60px;
+            border: 2px solid black;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #ddd;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+        .current-digit-display {
+            margin: 10px auto;
+        }
+        .controls {
+            margin: 20px;
+        }
+        .message {
+            font-size: 20px;
+            margin-top: 15px;
+            font-weight: bold;
+        }
+        .color-picker {
+            margin-top: 20px;
+        }
+        .color-options {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        .color-options button {
+            margin: 5px 0;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        /* Lighter color presets for buttons */
+        .red-button {
+            background: #ff9999;
+        }
+        .orange-button {
+            background: #ffd180;
+        }
+        .yellow-button {
+            background: #fff59d;
+        }
+        .green-button {
+            background: #80cbc4;
+        }
+        .blue-button {
+            background: #90caf9;
+        }
+        .purple-button {
+            background: #ce93d8;
+        }
+
+        .new-game-button {
+            font-size: 20px;
+            padding: 10px 20px;
+        }
+
+        /* Toggle switch container */
+        .dark-mode-switch {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            width: 80px;
+            height: 30px;
+            background-color: #ccc;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            cursor: pointer;
+        }
+        .dark-mode-switch span {
+            font-size: 12px;
+        }
+        .toggle-dot {
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background-color: #fff;
+            top: 2px;
+            left: 2px;
+            transition: left 0.3s ease;
+        }
+        /* Move toggle-dot to the right in dark mode */
+        .dark-mode .toggle-dot {
+            left: 52px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>Strategic Digits</h1>
+        <p>Place digits to form the largest number possible.</p>
+        <h2>High Score: <span id="high-score">0</span></h2>
+        <h2>Lowest Score: <span id="low-score">0</span></h2>
+        <div class="slots" id="slots"></div>
+        <h2>Current Digit:</h2>
+        <div class="current-digit-display" id="current-digit"></div>
+        <div class="controls" id="controls"></div>
+        <button class="new-game-button" onclick="newGame()">New Game</button>
+        <div class="message" id="game-message"></div>
+        <div class="color-picker">
+            <p>Select a color preset:</p>
+            <div class="color-options">
+                <button class="red-button" onclick="setHue(0)"></button>
+                <button class="orange-button" onclick="setHue(30)"></button>
+                <button class="yellow-button" onclick="setHue(60)"></button>
+                <button class="green-button" onclick="setHue(120)"></button>
+                <button class="blue-button" onclick="setHue(240)"></button>
+                <button class="purple-button" onclick="setHue(280)"></button>
+            </div>
+        </div>
+        <div class="dark-mode-switch" onclick="toggleDarkMode()">
+            <span>Light</span>
+            <div class="toggle-dot"></div>
+            <span>Dark</span>
+        </div>
+    </div>
+
+    <script>
+        let slots = Array(7).fill(null);
+        let currentDigit = null;
+        let rollsLeft = 7;
+        let hue = 120;
+
+        // Parse highScore and lowScore as numbers from localStorage.
+        let storedHighScore = localStorage.getItem('highScore');
+        let storedLowScore = localStorage.getItem('lowScore');
+
+        let highScore = storedHighScore ? parseInt(storedHighScore, 10) : 0;
+        let lowScore = storedLowScore ? parseInt(storedLowScore, 10) : Infinity;
+
+        document.getElementById("high-score").innerText = formatNumber(highScore);
+        document.getElementById("low-score").innerText = lowScore !== Infinity ? formatNumber(lowScore) : "0";
+
+        function rollDigit() {
+            return Math.floor(Math.random() * 10);
+        }
+
+        function updateDisplay() {
+            const slotsContainer = document.getElementById("slots");
+            slotsContainer.innerHTML = "";
+            slots.forEach((num, index) => {
+                const div = document.createElement("div");
+                div.className = "slot";
+                div.innerText = num !== null ? num : "";
+                div.style.backgroundColor = getColorForDigit(num);
+                div.onclick = () => placeDigit(index);
+                slotsContainer.appendChild(div);
+            });
+            const currentDigitDisplay = document.getElementById("current-digit");
+            currentDigitDisplay.innerText = currentDigit !== null ? currentDigit : "-";
+            currentDigitDisplay.style.backgroundColor = getColorForDigit(currentDigit);
+        }
+
+        // The formula should yield 0 saturation for digit=0 and ~65% for digit=9.
+        // So let's use 9 => 65 => slope ~ 7.22.
+        function getColorForDigit(digit) {
+            if (digit === null) return "#ddd";
+            let saturation = digit * (65 / 9); // about 7.22 per digit.
+            // Lightness set to 70%.
+            return `hsl(${hue}, ${saturation.toFixed(2)}%, 70%)`;
+        }
+
+        function placeDigit(index) {
+            if (slots[index] === null && currentDigit !== null) {
+                slots[index] = currentDigit;
+                rollsLeft--;
+                if (rollsLeft > 0) {
+                    currentDigit = rollDigit();
+                } else {
+                    endGame();
+                }
+                updateDisplay();
+            }
+        }
+
+        function endGame() {
+            let finalNumber = parseInt(slots.join(""));
+            document.getElementById("game-message").innerText = "Your number: " + formatNumber(finalNumber);
+            if (finalNumber > highScore) {
+                highScore = finalNumber;
+                localStorage.setItem('highScore', highScore);
+                document.getElementById("high-score").innerText = formatNumber(highScore);
+            }
+            if ((finalNumber < lowScore) || (lowScore === Infinity)) {
+                lowScore = finalNumber;
+                localStorage.setItem('lowScore', lowScore);
+                document.getElementById("low-score").innerText = formatNumber(lowScore);
+            }
+        }
+
+        function newGame() {
+            slots.fill(null);
+            rollsLeft = 7;
+            currentDigit = rollDigit();
+            document.getElementById("game-message").innerText = "";
+            updateDisplay();
+        }
+
+        function setHue(selectedHue) {
+            hue = selectedHue;
+            updateDisplay();
+        }
+
+        function formatNumber(number) {
+            return number.toLocaleString();
+        }
+
+        function toggleDarkMode() {
+            document.body.classList.toggle('dark-mode');
+        }
+
+        newGame();
+    </script>
+</body>
+</html>
