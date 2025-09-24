@@ -29,7 +29,16 @@
     .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px }
     .card { border:1px solid #e8e8e8; border-radius:14px; overflow:hidden; transition: transform .06s ease, box-shadow .06s ease, border-color .25s ease, background .25s ease; background:#fff }
     .card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.06) }
-    .thumb { aspect-ratio:16/9; width:100%; object-fit:cover; background:#f0f0f0 }
+
+    /* square thumbnails, fully visible */
+    .thumb {
+      width:100%;
+      aspect-ratio: 1 / 1;
+      object-fit: contain;
+      background:#f0f0f0;
+      display:block;
+    }
+
     .inner { padding:12px 14px }
     .title { margin:0 0 6px; font-size:18px; font-weight:650 }
     .meta { color:#666; font-size:12px }
@@ -67,37 +76,37 @@
 
     <section class="grid">
       <a class="card" href="farkle/">
-        <img class="thumb" src="../../images/farkle.png" alt="2-Player Farkle">
+        <img class="thumb" src="../../images/farkle.png" alt="2-Player Farkle" onerror="this.onerror=null;this.src='../../images/default.png';">
         <div class="inner"><h3 class="title">2-Player Farkle</h3><div class="meta">Modern gradient styling; made to play with my son.</div></div>
       </a>
 
       <a class="card" href="yahtzee/">
-        <img class="thumb" src="../../images/yahtzee.png" alt="Yahtzee">
+        <img class="thumb" src="../../images/yahtzee.png" alt="Yahtzee" onerror="this.onerror=null;this.src='../../images/default.png';">
         <div class="inner"><h3 class="title">Yahtzee</h3><div class="meta">Modern gradient styling with persistent high score.</div></div>
       </a>
 
       <a class="card" href="chess/">
-        <img class="thumb" src="../../images/chess.png" alt="Chess">
+        <img class="thumb" src="../../images/chess.png" alt="Chess" onerror="this.onerror=null;this.src='../../images/default.png';">
         <div class="inner"><h3 class="title">Chess</h3><div class="meta">Tabletop sandbox for pass-and-play offline.</div></div>
       </a>
 
       <a class="card" href="checkers/">
-        <img class="thumb" src="../../images/checkers.png" alt="Checkers">
+        <img class="thumb" src="../../images/checkers.png" alt="Checkers" onerror="this.onerror=null;this.src='../../images/default.png';">
         <div class="inner"><h3 class="title">Checkers</h3><div class="meta">Tabletop sandbox for pass-and-play offline.</div></div>
       </a>
 
       <a class="card" href="connect-4/">
-        <img class="thumb" src="../../images/connect-4.png" alt="Connect-4">
+        <img class="thumb" src="../../images/connect-4.png" alt="Connect-4" onerror="this.onerror=null;this.src='../../images/default.png';">
         <div class="inner"><h3 class="title">Connect-4</h3><div class="meta">Simple two-player Connect-4 with an undo button.</div></div>
       </a>
 
       <a class="card" href="strategic-digits/">
-        <img class="thumb" src="../../images/strategic-digits.png" alt="Strategic Digits">
+        <img class="thumb" src="../../images/strategic-digits.png" alt="Strategic Digits" onerror="this.onerror=null;this.src='../../images/default.png';">
         <div class="inner"><h3 class="title">Strategic Digits</h3><div class="meta">Place digits to form the largest number possible.</div></div>
       </a>
 
       <a class="card" href="phone-unlock-screen/">
-        <img class="thumb" src="../../images/phone-unlock-screen.png" alt="Phone Unlock Screen">
+        <img class="thumb" src="../../images/phone-unlock-screen.png" alt="Phone Unlock Screen" onerror="this.onerror=null;this.src='../../images/default.png';">
         <div class="inner"><h3 class="title">Phone Unlock Screen</h3><div class="meta">Not that exciting—not even a game. Why did I make this?</div></div>
       </a>
     </section>
