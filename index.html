@@ -20,13 +20,15 @@
     body.dark { background:#1f1f1f; color:#f5f5f5; }
 
     .wrap { width:100%; max-width: var(--max) }
+
     header { display:flex; gap:16px; align-items:flex-start; justify-content:space-between; margin-bottom:12px }
-    h1 { margin:0 0 4px; line-height:1.15 }
-    .sub { margin:0; color:#555 }
-    body.dark .sub { color:#c9c9c9 }
+    h1 { margin:0 0 6px; line-height:1.15 }
+    .subtitle { margin:0; color:#555; font-size:14px }
+    body.dark .subtitle { color:#c9c9c9 }
 
     .section { margin-top: 24px }
     .section h2 { margin: 0 0 10px; font-size: 20px }
+
     .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:16px }
 
     .card {
@@ -36,7 +38,16 @@
       background:#fff;
     }
     .card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.06) }
-    .thumb { aspect-ratio:16/9; width:100%; object-fit:cover; background:#f0f0f0 }
+
+    /* square thumbnails, fully visible */
+    .thumb {
+      width:100%;
+      aspect-ratio: 1 / 1;
+      object-fit: contain;
+      background:#f0f0f0;
+      display:block;
+    }
+
     .inner { padding:12px 14px }
     .title { margin:0 0 6px; font-size:18px; font-weight:650 }
     .meta { display:flex; gap:8px; flex-wrap:wrap; color:#666; font-size:12px }
@@ -64,9 +75,6 @@
       background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); transition: transform .25s ease;
     }
     body.dark .switch-dot { transform: translateX(58px); }
-
-    .muted-note { font-size:13px; color:#666; margin-bottom:8px }
-    body.dark .muted-note { color:#bdbdbd }
   </style>
 </head>
 <body>
@@ -74,10 +82,9 @@
     <header>
       <div>
         <h1>AI/Programming Portfolio<br>Collection of my tools, games, and projects written by AI coding agents and designed by me.</h1>
-        <p class="sub">Click a card for details.</p>
+        <p class="subtitle"></p>
       </div>
       <div class="switch-wrap">
-        <a href="mailto:you@example.com">you@example.com</a>
         <div class="theme-switch" id="theme-switch" role="button" aria-label="Toggle dark mode" aria-pressed="false" tabindex="0">
           <span>Light</span>
           <div class="switch-dot"></div>
@@ -86,21 +93,36 @@
       </div>
     </header>
 
-    <!-- WORK PROJECTS (add items here when ready) -->
+    <!-- WORK PROJECTS -->
     <section class="section" id="work-projects">
       <h2>Work Projects</h2>
-      <p class="muted-note">Coming soon. (Move cards here if they’re professional/work builds.)</p>
       <div class="grid">
-        <!-- Example placeholder card (delete later)
-        <a class="card" href="#">
-          <img class="thumb" src="./images/example-work.png" alt="Example Work Project">
+        <a class="card" href="projects/document-summarization-tool/">
+          <img class="thumb" src="./images/document-summarization-tool.png" alt="Document Summarization Tool" onerror="this.onerror=null;this.src='./images/default.png';">
           <div class="inner">
-            <h3 class="title">Example Work Project</h3>
-            <div class="meta"><span>LLM tooling</span></div>
-            <div class="desc">Short description of the work project.</div>
+            <h3 class="title">Document Summarization Tool</h3>
+            <div class="meta"><span>work</span></div>
+            <div class="desc">Summarize long documents into concise, structured notes.</div>
           </div>
         </a>
-        -->
+
+        <a class="card" href="projects/internal-council/">
+          <img class="thumb" src="./images/internal-council.png" alt="Internal Council" onerror="this.onerror=null;this.src='./images/default.png';">
+          <div class="inner">
+            <h3 class="title">Internal Council</h3>
+            <div class="meta"><span>work</span></div>
+            <div class="desc">Multi-agent “council” pattern for internal decision support.</div>
+          </div>
+        </a>
+
+        <a class="card" href="projects/transcript-processor/">
+          <img class="thumb" src="./images/transcript-processor.png" alt="Teams Meeting Transcript Processor" onerror="this.onerror=null;this.src='./images/default.png';">
+          <div class="inner">
+            <h3 class="title">Teams Meeting Transcript Processor</h3>
+            <div class="meta"><span>work</span></div>
+            <div class="desc">Process meeting transcripts to extract action items and themes.</div>
+          </div>
+        </a>
       </div>
     </section>
 
@@ -109,7 +131,7 @@
       <h2>Personal Projects</h2>
       <div class="grid">
         <a class="card" href="projects/skyward-blob/">
-          <img class="thumb" src="./images/skyward-blob.png" alt="Skyward Blob">
+          <img class="thumb" src="./images/skyward-blob.png" alt="Skyward Blob" onerror="this.onerror=null;this.src='./images/default.png';">
           <div class="inner">
             <h3 class="title">Skyward Blob</h3>
             <div class="meta"><span>game</span></div>
@@ -118,7 +140,7 @@
         </a>
 
         <a class="card" href="projects/space-opoly/">
-          <img class="thumb" src="./images/space-opoly.png" alt="Space-opoly">
+          <img class="thumb" src="./images/spaceopoly.png" alt="Space-opoly" onerror="this.onerror=null;this.src='./images/default.png';">
           <div class="inner">
             <h3 class="title">Space-opoly</h3>
             <div class="meta"><span>game</span></div>
@@ -127,7 +149,7 @@
         </a>
 
         <a class="card" href="projects/pixel-art-fixer/">
-          <img class="thumb" src="./images/pixel-art-fixer.png" alt="Pixel Art Fixer">
+          <img class="thumb" src="./images/pixel-art-fixer.png" alt="Pixel Art Fixer" onerror="this.onerror=null;this.src='./images/default.png';">
           <div class="inner">
             <h3 class="title">Pixel Art Fixer</h3>
             <div class="meta"><span>tool</span></div>
@@ -136,7 +158,7 @@
         </a>
 
         <a class="card" href="projects/chat-history-processor/">
-          <img class="thumb" src="./images/chat-history-processor.png" alt="Chat History Processor">
+          <img class="thumb" src="./images/default.png" alt="Chat History Processor">
           <div class="inner">
             <h3 class="title">Chat History Processor</h3>
             <div class="meta"><span>LLM</span></div>
@@ -145,7 +167,7 @@
         </a>
 
         <a class="card" href="projects/svg-icon-viewer/">
-          <img class="thumb" src="./images/svg-icon-viewer.png" alt="SVG Icon Viewer">
+          <img class="thumb" src="./images/svg-viewer.png" alt="SVG Icon Viewer" onerror="this.onerror=null;this.src='./images/default.png';">
           <div class="inner">
             <h3 class="title">SVG Icon Viewer</h3>
             <div class="meta"><span>tool</span></div>
@@ -154,7 +176,7 @@
         </a>
 
         <a class="card" href="projects/traders-starmap/">
-          <img class="thumb" src="./images/traders-starmap.png" alt="Trader's Starmap">
+          <img class="thumb" src="./images/starmap-endless-sky.png" alt="Trader’s Starmap" onerror="this.onerror=null;this.src='./images/default.png';">
           <div class="inner">
             <h3 class="title">Trader’s Starmap</h3>
             <div class="meta"><span>mockup</span></div>
@@ -163,7 +185,7 @@
         </a>
 
         <a class="card" href="projects/elemental-equations/">
-          <img class="thumb" src="./images/elemental-equations.png" alt="Elemental Equations">
+          <img class="thumb" src="./images/elemental-equations.png" alt="Elemental Equations" onerror="this.onerror=null;this.src='./images/default.png';">
           <div class="inner">
             <h3 class="title">Elemental Equations</h3>
             <div class="meta"><span>LLM</span></div>
@@ -172,7 +194,7 @@
         </a>
 
         <a class="card" href="projects/orbital-mechanics-sim/">
-          <img class="thumb" src="./images/orbital-mechanics-sim.png" alt="Orbital Mechanics Sim">
+          <img class="thumb" src="./images/orbital-mechanics-sim.png" alt="Orbital Mechanics Sim" onerror="this.onerror=null;this.src='./images/default.png';">
           <div class="inner">
             <h3 class="title">Orbital Mechanics Sim</h3>
             <div class="meta"><span>sim</span></div>
@@ -181,7 +203,7 @@
         </a>
 
         <a class="card" href="projects/program-the-robot/">
-          <img class="thumb" src="./images/program-the-robot.png" alt="Program the Robot">
+          <img class="thumb" src="./images/program-the-robot.png" alt="Program the Robot" onerror="this.onerror=null;this.src='./images/default.png';">
           <div class="inner">
             <h3 class="title">Program the Robot</h3>
             <div class="meta"><span>game</span></div>
@@ -190,7 +212,7 @@
         </a>
 
         <a class="card" href="projects/n64-twitter-client/">
-          <img class="thumb" src="./images/n64-twitter-client.png" alt="N64 Twitter Client">
+          <img class="thumb" src="./images/N64twitter.png" alt="N64 Twitter Client" onerror="this.onerror=null;this.src='./images/default.png';">
           <div class="inner">
             <h3 class="title">N64 Twitter Client</h3>
             <div class="meta"><span>retro</span></div>
@@ -199,7 +221,7 @@
         </a>
 
         <a class="card" href="projects/classic-games/">
-          <img class="thumb" src="./images/classic-games.png" alt="Classic Games collection">
+          <img class="thumb" src="./images/classic-games.png" alt="Classic Games collection" onerror="this.onerror=null;this.src='./images/default.png';">
           <div class="inner">
             <h3 class="title">Classic Games</h3>
             <div class="meta"><span>collection</span></div>
@@ -216,7 +238,7 @@
       <h2>Under Construction</h2>
       <div class="grid">
         <a class="card uc" href="projects/llm-brainstorming-framework/">
-          <img class="thumb" src="./images/llm-brainstorming-framework.png" alt="LLM Brainstorming Framework">
+          <img class="thumb" src="./images/default.png" alt="LLM Brainstorming Framework">
           <div class="inner">
             <h3 class="title">LLM Brainstorming Framework</h3>
             <div class="meta"><span>under construction</span></div>
@@ -225,7 +247,7 @@
         </a>
 
         <a class="card uc" href="projects/kingdoms-ccg-restored/">
-          <img class="thumb" src="./images/kingdoms-ccg-restored.png" alt="Kingdoms CCG Restored">
+          <img class="thumb" src="./images/default.png" alt="Kingdoms CCG Restored">
           <div class="inner">
             <h3 class="title">Kingdoms CCG Restored</h3>
             <div class="meta"><span>under construction</span></div>
@@ -234,7 +256,7 @@
         </a>
 
         <a class="card uc" href="projects/medieval-kingdom/">
-          <img class="thumb" src="./images/medieval-kingdom.png" alt="Medieval Kingdom">
+          <img class="thumb" src="./images/default.png" alt="Medieval Kingdom">
           <div class="inner">
             <h3 class="title">Medieval Kingdom</h3>
             <div class="meta"><span>under construction</span></div>
