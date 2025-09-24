@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Connect Four — Dark Mode</title>
+<style>
+  :root{
+    --bg: #0b0f14;
+    --panel: #111723;
+    --panel-2: #0e141e;
+    --ink: #eaf2ff;
+    --muted: #9bb0c9;
+    --accent-a: #5dd6ff;
+    --accent-b: #8b5cf6;
+
+    --board: #0f1622;
+    --slot: #1a2332;
+    --slot-edge: rgba(255,255,255,.08);
+    --slot-h: #253145;
+
+    --p1: #ff5a6d;  /* red */
+    --p2: #ffd166;  /* yellow */
+    --win: #63ffda;
+
+    --radius: 18px;
+    --shadow: 0 18px 40px rgba(0,0,0,.5);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0; color:var(--ink);
+    background:
+      radial-gradient(1200px 900px at 8% -10%, #16212e 0%, rgba(22,33,46,0) 60%),
+      radial-gradient(1200px 900px at 110% 120%, #171f2a 0%, rgba(23,31,42,0) 60%),
+      var(--bg);
+    font: 15px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Inter, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  .app{
+    max-width: 980px;
+    margin: clamp(10px,4vmin,28px) auto;
+    padding: clamp(12px,2.5vmin,24px);
+    background: linear-gradient(180deg, var(--panel), var(--panel-2));
+    border-radius: calc(var(--radius) + 4px);
+    border: 1px solid rgba(255,255,255,.06);
+    box-shadow: var(--shadow);
+  }
+
+  header{
+    display:flex; gap:16px; align-items:center; justify-content:space-between;
+    margin-bottom: 12px;
+  }
+  .title{
+    display:flex; align-items:center; gap:12px;
+  }
+  .title h1{ margin:0; font-size:18px; letter-spacing:.3px }
+  .badge{
+    font-size:12px; color:var(--muted);
+    background: rgba(255,255,255,.05);
+    padding:6px 10px; border-radius:999px; border:1px solid rgba(255,255,255,.08);
+  }
+
+  .toolbar{ display:flex; gap:10px; flex-wrap:wrap }
+  button{
+    appearance:none; border:0; cursor:pointer; color:var(--ink);
+    padding:10px 14px; border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(0,0,0,.35));
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.5), 0 8px 20px rgba(0,0,0,.35);
+    transition: transform .08s ease;
+  }
+  button:hover{ transform: translateY(-1px) }
+  button:active{ transform: translateY(0) scale(.98) }
+
+  .status{
+    display:flex; align-items:center; gap:10px; margin-top:8px; color:var(--muted)
+  }
+  .pill{
+    min-width: 12px; height:12px; border-radius:999px; display:inline-block;
+    box-shadow: 0 0 12px currentColor;
+  }
+  .p1{ color: var(--p1) } .p2{ color: var(--p2) }
+
+  /* Board */
+  .wrap{
+    position: relative;
+    display:grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+    align-items: start;
+  }
+  .board{
+    position:relative;
+    width: min(90vw, 880px);
+    aspect-ratio: 7 / 6; /* 7 columns, 6 rows */
+    margin: 0 auto;
+    background: linear-gradient(180deg, var(--board), #0b121c);
+    border-radius: var(--radius);
+    border:1px solid rgba(255,255,255,.08);
+    box-shadow: var(--shadow);
+    overflow:hidden;
+  }
+
+  .grid{
+    position:absolute; inset: clamp(10px, 2.2vmin, 18px);
+    display:grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    gap: clamp(6px,1.2vmin,12px);
+  }
+
+  .cell{
+    position:relative;
+    background: var(--slot);
+    border-radius: 14px;
+    border:1px solid var(--slot-edge);
+    overflow: hidden;
+  }
+  .cell::after{
+    content:"";
+    position:absolute; inset:0;
+    background: radial-gradient(120% 90% at 50% -10%, rgba(255,255,255,.06), transparent 58%);
+    pointer-events:none;
+  }
+  .col-hover{ outline:2px dashed rgba(255,255,255,.12); outline-offset:-4px; background:var(--slot-h) }
+
+  .tokens{
+    position:absolute; inset: clamp(10px, 2.2vmin, 18px);
+    pointer-events:none;
+  }
+  .token{
+    position:absolute;
+    width: calc((100% - (6 * clamp(6px,1.2vmin,12px))) / 7);
+    height: calc((100% - (5 * clamp(6px,1.2vmin,12px))) / 6);
+    border-radius: 999px;
+    transform: translate(0, -120%); /* start above */
+    transition: transform 260ms ease-out;
+    box-shadow:
+      inset 0 1px 0 rgba(255,255,255,.25),
+      inset 0 -3px 10px rgba(0,0,0,.55),
+      0 12px 28px rgba(0,0,0,.45);
+  }
+  .t1{ background: var(--p1) }
+  .t2{ background: var(--p2) }
+
+  .token.win{
+    outline: 3px solid var(--win);
+    box-shadow:
+      0 0 0 3px rgba(0,0,0,.5) inset,
+      0 0 22px var(--win),
+      0 14px 28px rgba(0,0,0,.6);
+  }
+
+  .hint{ text-align:center; color:var(--muted); font-size:13px }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="title">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M3 7h18M3 12h18M3 17h18" stroke="url(#g1)" stroke-width="1.6" stroke-linecap="round"/>
+          <defs>
+            <linearGradient id="g1" x1="0" y1="0" x2="24" y2="24"><stop stop-color="#5dd6ff"/><stop offset="1" stop-color="#8b5cf6"/></linearGradient>
+          </defs>
+        </svg>
+        <h1>Connect Four</h1>
+        <span class="badge">Dark • Animated • 2-Player</span>
+      </div>
+      <div class="toolbar">
+        <button id="newBtn">New Game</button>
+        <button id="undoBtn">Undo</button>
+      </div>
+    </header>
+
+    <div class="status" id="status">
+      <span>Turn:</span>
+      <span class="pill p1" id="turnPill" title="Current player indicator"></span>
+      <strong id="turnText">Red</strong>
+    </div>
+
+    <div class="wrap">
+      <div class="board" id="board">
+        <div class="grid" id="grid" aria-label="Connect Four board"></div>
+        <div class="tokens" id="tokens"></div>
+      </div>
+      <div class="hint">Click a column to drop your disc. First to connect four wins. Use <b>Undo</b> if a kiddo misclicks.</div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  const ROWS = 6, COLS = 7;
+  const gridEl = document.getElementById('grid');
+  const tokensEl = document.getElementById('tokens');
+  const boardEl = document.getElementById('board');
+  const newBtn = document.getElementById('newBtn');
+  const undoBtn = document.getElementById('undoBtn');
+  const turnText = document.getElementById('turnText');
+  const turnPill = document.getElementById('turnPill');
+
+  let board = Array.from({length:ROWS}, () => Array(COLS).fill(0)); // 0 empty, 1 red, 2 yellow
+  let turn = 1;                 // 1 or 2
+  let lock = false;             // blocks input during animation
+  let history = [];             // stack of {r,c}
+  let gameOver = false;
+
+  // Build clickable cells (for hover guidance)
+  const cells = [];
+  for (let r=0;r<ROWS;r++){
+    for (let c=0;c<COLS;c++){
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+      gridEl.appendChild(cell);
+      cells.push(cell);
+    }
+  }
+
+  // Column hover effect
+  gridEl.addEventListener('mousemove', (e) => {
+    const rect = gridEl.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const col = Math.max(0, Math.min(COLS-1, Math.floor(x / ((rect.width + 1e-6)/COLS))));
+    cells.forEach((cell) => {
+      cell.classList.toggle('col-hover', Number(cell.dataset.c) === col);
+    });
+  });
+  gridEl.addEventListener('mouseleave', () => cells.forEach(c => c.classList.remove('col-hover')));
+
+  // Click to drop
+  gridEl.addEventListener('click', (e) => {
+    if (lock || gameOver) return;
+    const rect = gridEl.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const col = Math.max(0, Math.min(COLS-1, Math.floor(x / ((rect.width + 1e-6)/COLS))));
+    drop(col);
+  });
+
+  function drop(col){
+    // find lowest empty
+    let row = -1;
+    for (let r=ROWS-1; r>=0; r--){
+      if (board[r][col] === 0){ row = r; break; }
+    }
+    if (row === -1) return; // full column
+
+    lock = true;
+    // place visually with a falling animation
+    const pos = cellRect(row, col);
+    const token = document.createElement('div');
+    token.className = `token t${turn}`;
+    token.style.left = `${pos.left}px`;
+    token.style.top  = `0`; // start above tokens area
+    tokensEl.appendChild(token);
+
+    // Force layout then animate to dest
+    requestAnimationFrame(() => {
+      token.style.transform = `translate(0, ${pos.top}px)`;
+    });
+
+    token.addEventListener('transitionend', () => {
+      // finalize state
+      board[row][col] = turn;
+      history.push({r:row, c:col, el:token});
+      // Check win
+      const winList = checkWin(row, col, turn);
+      if (winList){
+        gameOver = true;
+        winList.forEach(({r,c}) => markWin(r,c));
+        setStatus(`${turn === 1 ? 'Red' : 'Yellow'} wins! 🎉`);
+        lock = false;
+        return;
+      }
+      // Check draw
+      if (board.every(row => row.every(v => v !== 0))){
+        gameOver = true;
+        setStatus(`It's a draw.`);
+        lock = false;
+        return;
+      }
+      // next turn
+      turn = (turn === 1 ? 2 : 1);
+      updateTurnUI();
+      lock = false;
+    }, {once:true});
+  }
+
+  function cellRect(r,c){
+    // compute token's translate target within tokensEl
+    const tRect = tokensEl.getBoundingClientRect();
+    const gRect = gridEl.getBoundingClientRect();
+    const cellW = (gRect.width - (COLS-1)*gap()) / COLS;
+    const cellH = (gRect.height - (ROWS-1)*gap()) / ROWS;
+    const left = c * (cellW + gap());
+    const top  = r * (cellH + gap());
+    return {left, top};
+  }
+  function gap(){
+    // read the computed gap of .grid
+    return parseFloat(getComputedStyle(gridEl).gap) || 0;
+  }
+
+  function updateTurnUI(){
+    turnText.textContent = (turn === 1 ? 'Red' : 'Yellow');
+    turnPill.classList.toggle('p1', turn === 1);
+    turnPill.classList.toggle('p2', turn === 2);
+  }
+  function setStatus(text){
+    turnText.textContent = text;
+  }
+
+  function checkWin(r,c,player){
+    // directions: [dr, dc]
+    const dirs = [[0,1],[1,0],[1,1],[1,-1]];
+    for (const [dr,dc] of dirs){
+      const line = [{r,c}];
+      // forward
+      let rr=r+dr, cc=c+dc;
+      while (inB(rr,cc) && board[rr][cc]===player){ line.push({r:rr,c:cc}); rr+=dr; cc+=dc; }
+      // backward
+      rr=r-dr; cc=c-dc;
+      while (inB(rr,cc) && board[rr][cc]===player){ line.unshift({r:rr,c:cc}); rr-=dr; cc-=dc; }
+      if (line.length >= 4) return line.slice(0,4); // return first 4 in a row
+    }
+    return null;
+  }
+  function inB(r,c){ return r>=0 && r<ROWS && c>=0 && c<COLS; }
+
+  function markWin(r,c){
+    // find token at r,c (last matching position)
+    // simplest: compute pixel pos and select nearest token of that color
+    const target = cellRect(r,c);
+    const tokens = [...tokensEl.querySelectorAll('.token')];
+    let best = null, bestDist = Infinity;
+    tokens.forEach(t => {
+      const style = getComputedStyle(t);
+      const tr = new DOMMatrixReadOnly(style.transform);
+      const dx = (parseFloat(t.style.left)||0) - target.left;
+      const dy = tr.m42 - target.top;
+      const d = Math.hypot(dx,dy);
+      if (d < bestDist){ best = t; bestDist = d; }
+    });
+    if (best) best.classList.add('win');
+  }
+
+  function undo(){
+    if (!history.length || lock) return;
+    if (gameOver){
+      // clear win highlights if any
+      tokensEl.querySelectorAll('.token.win').forEach(t => t.classList.remove('win'));
+      gameOver = false;
+    }
+    const last = history.pop();
+    board[last.r][last.c] = 0;
+    last.el.remove();
+    turn = (turn === 1 ? 2 : 1);
+    updateTurnUI();
+  }
+
+  function reset(){
+    lock = false; gameOver = false; history = [];
+    board = Array.from({length:ROWS}, () => Array(COLS).fill(0));
+    tokensEl.innerHTML = '';
+    turn = 1;
+    updateTurnUI();
+  }
+
+  newBtn.addEventListener('click', reset);
+  undoBtn.addEventListener('click', undo);
+  updateTurnUI();
+
+  // Accessibility: keyboard play (left/right to move, enter to drop)
+  let kbCol = 3;
+  document.addEventListener('keydown', (e) => {
+    if (gameOver || lock) return;
+    if (e.key === 'ArrowLeft'){ kbCol = Math.max(0, kbCol-1); hoverCol(kbCol); }
+    else if (e.key === 'ArrowRight'){ kbCol = Math.min(COLS-1, kbCol+1); hoverCol(kbCol); }
+    else if (e.key === 'Enter' || e.key === ' '){ drop(kbCol); }
+  });
+  function hoverCol(c){
+    cells.forEach(cell => cell.classList.toggle('col-hover', Number(cell.dataset.c) === c));
+  }
+})();
+</script>
+</body>
+</html>
