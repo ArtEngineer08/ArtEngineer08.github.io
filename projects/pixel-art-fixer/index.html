@@ -1,0 +1,725 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Pixel Art Fixer v4.4</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #0f1117; color: #e6edf3;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial;
+  }
+  a { color: #8ab4ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(10,12,18,0.9);
+    backdrop-filter: blur(6px);
+    border-bottom: 1px solid #1f2430;
+  }
+  .topbar-inner {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    align-items: center;
+    padding: 12px 16px;
+  }
+  h1 {
+    margin: 0; font-size: 16px; font-weight: 700; letter-spacing: .3px; color: #e6edf3;
+  }
+  .controls {
+    display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center;
+  }
+  .control { display: flex; align-items: center; gap: 6px; }
+  .control label { font-size: 12px; color: #aab6c8; }
+  input[type="file"] {
+    border: 1px solid #2a3244; background:#0b1220; color:#e6edf3; padding:6px 8px; border-radius:8px;
+  }
+  input[type="number"], input[type="text"] {
+    border: 1px solid #2a3244; background:#0b1220; color:#e6edf3;
+    padding:6px 8px; border-radius:8px; width: 90px; font-variant-numeric: tabular-nums;
+  }
+  input[type="checkbox"] { transform: translateY(1px); }
+  button {
+    background: #2b55ff; color: white; border: 0; padding: 8px 12px; border-radius: 8px; font-weight: 700;
+    cursor: pointer;
+  }
+  button:disabled { opacity: .6; cursor: not-allowed; }
+  .status {
+    display: flex; gap: 10px; align-items: center; padding: 8px 16px; font-size: 12px; color: #9fb0c2;
+    border-top: 1px solid #1f2430; background: #0c121c;
+    flex-wrap: wrap;
+  }
+  .status .pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: #121a2a; border: 1px solid #1f2a44; border-radius: 999px; padding: 4px 10px;
+    color: #c8d3e0;
+  }
+  .status code { color: #e6edf3; }
+
+  .page { padding: 16px; }
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+  }
+  .card {
+    background: #0d1320; border: 1px solid #1e2636; border-radius: 12px; overflow: hidden;
+  }
+  .card h3 {
+    margin: 0; padding: 10px 12px; font-size: 13px; background: #0a0f1b; border-bottom: 1px solid #1e2636;
+    color: #cfd6e6; font-weight: 700;
+  }
+  .meta {
+    font-size: 12px; color: #98a2b3; padding: 6px 12px 0;
+  }
+  canvas {
+    display: block; width: 100%; height: auto; image-rendering: pixelated; background: #070a14;
+  }
+
+  /* Samples strip */
+  .samples {
+    display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap;
+    padding: 8px 16px; border-top: 1px solid #1f2430; background: #0c121c;
+  }
+  .samples .label { font-size: 12px; color: #aab6c8; }
+  .thumbs { display: inline-flex; gap: 8px; align-items: center; }
+  .thumb {
+    width: 36px; height: 36px; object-fit: cover; image-rendering: pixelated;
+    border: 1px solid #2a3244; border-radius: 6px; cursor: pointer; background:#0b1220;
+  }
+  .thumb:hover { outline: 2px solid #2b55ff; }
+  .thumb:active { transform: translateY(1px); }
+  .hint { font-size: 11px; color:#7f8aa3; margin-left: 6px; }
+  .basedon { margin-left: auto; font-size: 12px; color:#9fb0c2; white-space: nowrap; }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="topbar-inner">
+      <h1>Pixel Art Fixer v4.4</h1>
+      <div class="controls">
+        <div class="control"><input id="file" type="file" accept="image/*" /></div>
+
+        <div class="control"><label>K</label><input id="kColors" type="number" value="128" min="2" max="256" step="2" /></div>
+
+        <div class="control"><label>Edge High</label><input id="edgeHigh" type="number" value="0.20" min="0.01" max="1.00" step="0.01" /></div>
+        <div class="control"><label>Edge Low</label><input id="edgeLow" type="number" value="0.08" min="0.01" max="1.00" step="0.01" /></div>
+        <div class="control"><label>Close r</label><input id="morphR" type="number" value="1" min="0" max="3" step="1" /></div>
+
+        <div class="control"><label>Peaks ≥</label><input id="voteRatio" type="number" value="0.50" min="0.10" max="0.95" step="0.01" /></div>
+        <div class="control"><label>Cluster ±</label><input id="clusterTol" type="number" value="2" min="0" max="8" step="1" /></div>
+
+        <div class="control">
+          <label>Manual grid</label><input id="manualGrid" type="checkbox" />
+        </div>
+        <div class="control"><label>vx</label><input id="vx" type="number" value="0" min="0" step="1" /></div>
+        <div class="control"><label>vy</label><input id="vy" type="number" value="0" min="0" step="1" /></div>
+        <div class="control"><label>offX</label><input id="offX" type="number" value="0" min="0" step="1" /></div>
+        <div class="control"><label>offY</label><input id="offY" type="number" value="0" min="0" step="1" /></div>
+
+        <button id="run" disabled>Process</button>
+      </div>
+    </div>
+
+    <!-- Samples strip -->
+    <div class="samples">
+      <span class="label">Try sample images:</span>
+      <div class="thumbs">
+        <img class="thumb" src="samples/sample1.png" alt="Sample 1" title="Sample 1" data-src="samples/sample1.png">
+        <img class="thumb" src="samples/sample2.png" alt="Sample 2" title="Sample 2" data-src="samples/sample2.png">
+        <img class="thumb" src="samples/sample3.png" alt="Sample 3" title="Sample 3" data-src="samples/sample3.png">
+      </div>
+      <span class="hint">(click a thumbnail, or choose a file)</span>
+
+      <span class="basedon">
+        Based on: <a href="https://github.com/KennethJAllen/proper-pixel-art" rel="noopener" target="_blank">KennethJAllen/proper-pixel-art</a>.
+      </span>
+    </div>
+
+    <div class="status" id="status">
+      <div class="pill">Image: <code id="imgMeta">—</code></div>
+      <div class="pill">Detected: <code id="detMeta">vx=?, vy=?, off=(?, ?)</code></div>
+      <div class="pill">Using: <code id="useMeta">auto</code></div>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="grid" id="steps"></div>
+  </div>
+
+<script>
+/* ============================================================
+   Canvas helper
+============================================================ */
+function newCanvas(w, h) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  const ctx = c.getContext('2d', { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = false;
+  return c;
+}
+function ctx2d(canvas) { return canvas.getContext('2d'); }
+
+/* ============================================================
+   DOM refs
+============================================================ */
+const stepsEl = document.getElementById('steps');
+const fileEl  = document.getElementById('file');
+const kEl     = document.getElementById('kColors');
+const edgeHighEl  = document.getElementById('edgeHigh');
+const edgeLowEl   = document.getElementById('edgeLow');
+const morphREl    = document.getElementById('morphR');
+const voteRatioEl = document.getElementById('voteRatio');
+const clusterTolEl= document.getElementById('clusterTol');
+const manualGridEl= document.getElementById('manualGrid');
+const vxEl = document.getElementById('vx');
+const vyEl = document.getElementById('vy');
+const offXEl = document.getElementById('offX');
+const offYEl = document.getElementById('offY');
+const runBtn  = document.getElementById('run');
+
+const imgMeta = document.getElementById('imgMeta');
+const detMeta = document.getElementById('detMeta');
+const useMeta = document.getElementById('useMeta');
+
+let originalImage = null;
+let originalDims = { w:0, h:0 };
+let isProcessing = false;
+
+/* ============================================================
+   UI plumbing
+============================================================ */
+fileEl.addEventListener('change', async () => {
+  const f = fileEl.files && fileEl.files[0];
+  if (!f) { runBtn.disabled = true; return; }
+  const url = URL.createObjectURL(f);
+  try { await setOriginalFromURL(url); }
+  finally { URL.revokeObjectURL(url); }
+});
+
+document.querySelectorAll('.thumb').forEach(img => {
+  img.addEventListener('click', async () => {
+    const src = img.dataset.src || img.src;
+    stepsEl.innerHTML = '';
+    await setOriginalFromURL(src);
+  });
+});
+
+// Yield helper: let the browser paint updates before heavy work starts
+const nextFrame = () => new Promise(r => requestAnimationFrame(() => r()));
+const microtask = () => Promise.resolve();
+
+runBtn.addEventListener('click', async () => {
+  if (!originalImage || isProcessing) return;
+  isProcessing = true;
+  const prevText = runBtn.textContent;
+  runBtn.textContent = 'Processing...';
+  runBtn.disabled = true;
+  runBtn.setAttribute('aria-busy', 'true');
+
+  // Ensure the text/disabled state is painted before we begin heavy sync work
+  await microtask();
+  await nextFrame();
+
+  stepsEl.innerHTML = '';
+  try {
+    await processPipeline(originalImage); // body is synchronous; await keeps semantics
+  } finally {
+    isProcessing = false;
+    runBtn.textContent = prevText;
+    runBtn.disabled = false;
+    runBtn.removeAttribute('aria-busy');
+  }
+});
+
+manualGridEl.addEventListener('change', () => {
+  useMeta.textContent = manualGridEl.checked ? 'manual' : 'auto';
+});
+
+/* ============================================================
+   Small DOM helpers
+============================================================ */
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = e => reject(e);
+    img.src = src;
+  });
+}
+async function setOriginalFromURL(src) {
+  originalImage = await loadImage(src);
+  originalDims = {
+    w: originalImage.naturalWidth || originalImage.width,
+    h: originalImage.naturalHeight || originalImage.height
+  };
+  imgMeta.textContent = `${originalDims.w}×${originalDims.h}`;
+  runBtn.disabled = false;
+}
+function addStep(title, canvas, metaText = '') {
+  const card = document.createElement('div');
+  card.className = 'card';
+  const head = document.createElement('h3');
+  head.textContent = title;
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  meta.textContent = `${canvas.width}×${canvas.height}px${metaText ? ' • '+metaText : ''}`;
+  card.appendChild(head);
+  card.appendChild(meta);
+  card.appendChild(canvas);
+  stepsEl.appendChild(card);
+}
+
+/* ============================================================
+   Processing steps (same as previous)
+============================================================ */
+function drawImageToCanvas(img) {
+  const w = img.naturalWidth || img.width;
+  const h = img.naturalHeight || img.height;
+  const c = newCanvas(w, h);
+  ctx2d(c).drawImage(img, 0, 0);
+  return c;
+}
+
+function trimAndAlphaClean(srcCanvas) {
+  const {width:w, height:h} = srcCanvas;
+  const ctx = ctx2d(srcCanvas);
+  const img = ctx.getImageData(0, 0, w, h);
+  const d = img.data;
+
+  for (let i=0; i<d.length; i+=4) {
+    if (d[i+3] < 128) { d[i]=d[i+1]=d[i+2]=0; d[i+3]=0; }
+  }
+
+  let minx=w, miny=h, maxx=-1, maxy=-1;
+  for (let y=0; y<h; y++) for (let x=0; x<w; x++) {
+    const idx = (y*w + x)*4;
+    if (d[idx+3] > 0) {
+      if (x<minx) minx=x; if (y<miny) miny=y;
+      if (x>maxx) maxx=x; if (y>maxy) maxy=y;
+    }
+  }
+  if (maxx < minx || maxy < miny) return {canvas: srcCanvas, bbox: {x:0,y:0,w,h}};
+
+  const cw = (maxx - minx + 1), ch = (maxy - miny + 1);
+  const out = newCanvas(cw, ch);
+  ctx2d(out).putImageData(img, -minx, -miny);
+  return {canvas: out, bbox: {x:minx, y:miny, w:cw, h:ch}};
+}
+
+function upscale2xNN(src) {
+  const out = newCanvas(src.width*2, src.height*2);
+  const ctx = ctx2d(out);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(src, 0, 0, out.width, out.height);
+  return out;
+}
+
+function toGrayscaleFloat(src) {
+  const {width:w, height:h} = src;
+  const g = new Float32Array(w*h);
+  const d = ctx2d(src).getImageData(0,0,w,h).data;
+  for (let i=0, p=0; i<d.length; i+=4, p++) {
+    const a = d[i+3]/255;
+    g[p] = a * (0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]);
+  }
+  return {w,h,g};
+}
+function gaussianBlurSeparable({w,h,g}) {
+  const k = [1,4,6,4,1]; const ksum = 16;
+  const tmp = new Float32Array(w*h);
+  const out = new Float32Array(w*h);
+  for (let y=0; y<h; y++) {
+    const row=y*w;
+    for (let x=0; x<w; x++) {
+      let acc=0;
+      for (let i=-2; i<=2; i++) { const xx = Math.min(w-1, Math.max(0, x+i)); acc += g[row+xx] * k[i+2]; }
+      tmp[row+x] = acc / ksum;
+    }
+  }
+  for (let x=0; x<w; x++) {
+    for (let y=0; y<h; y++) {
+      let acc=0;
+      for (let i=-2; i<=2; i++) { const yy = Math.min(h-1, Math.max(0, y+i)); acc += tmp[yy*w+x] * k[i+2]; }
+      out[y*w+x] = acc / ksum;
+    }
+  }
+  return out;
+}
+function sobel({w,h}, blurred) {
+  const GxK = [-1,0,1, -2,0,2, -1,0,1];
+  const GyK = [-1,-2,-1, 0,0,0, 1,2,1];
+  const mag = new Float32Array(w*h);
+  const ang = new Float32Array(w*h);
+  for (let y=1; y<h-1; y++) for (let x=1; x<w-1; x++) {
+    let gx=0, gy=0, k=0;
+    for (let j=-1;j<=1;j++) for (let i=-1;i<=1;i++,k++) {
+      const v = blurred[(y+j)*w + (x+i)];
+      gx += v * GxK[k]; gy += v * GyK[k];
+    }
+    const m = Math.hypot(gx, gy);
+    mag[y*w+x] = m;
+    let a = Math.atan2(gy, gx) * 180/Math.PI;
+    if (a<0) a += 180; ang[y*w+x] = a;
+  }
+  return {mag, ang};
+}
+function nonMaxSuppression({w,h}, mag, ang) {
+  const out = new Float32Array(w*h);
+  for (let y=1; y<h-1; y++) for (let x=1; x<w-1; x++) {
+    const idx = y*w+x, a = ang[idx], m = mag[idx];
+    let dir = 0, m1=0, m2=0;
+    if (a>=22.5 && a<67.5) dir=45;
+    else if (a>=67.5 && a<112.5) dir=90;
+    else if (a>=112.5 && a<157.5) dir=135;
+    if (dir===0)       { m1 = mag[idx-1];       m2 = mag[idx+1]; }
+    else if (dir===45) { m1 = mag[(y-1)*w+x+1]; m2 = mag[(y+1)*w+x-1]; }
+    else if (dir===90) { m1 = mag[(y-1)*w+x];   m2 = mag[(y+1)*w+x]; }
+    else               { m1 = mag[(y-1)*w+x-1]; m2 = mag[(y+1)*w+x+1]; }
+    out[idx] = (m>=m1 && m>=m2) ? m : 0;
+  }
+  return out;
+}
+function doubleThreshold({w,h}, nms, highRatio=0.2, lowRatio=0.08) {
+  let max = 0; for (let i=0;i<nms.length;i++) if (nms[i]>max) max=nms[i];
+  const high=max*highRatio, low=max*lowRatio;
+  const STRONG=255, WEAK=75;
+  const out = new Uint8ClampedArray(w*h);
+  for (let i=0;i<nms.length;i++) {
+    const v = nms[i];
+    out[i] = (v>=high) ? STRONG : (v>=low ? WEAK : 0);
+  }
+  const stack=[]; for (let i=0;i<out.length;i++) if (out[i]===STRONG) stack.push(i);
+  const nbr = (i) => {
+    const y=(i/w)|0, x=i-y*w, res=[];
+    for (let j=-1;j<=1;j++) for (let k=-1;k<=1;k++) {
+      if (!j && !k) continue;
+      const xx=x+k, yy=y+j;
+      if (xx>=0 && yy>=0 && xx<w && yy<h) res.push(yy*w+xx);
+    }
+    return res;
+  };
+  while (stack.length) {
+    const i = stack.pop();
+    for (const n of nbr(i)) if (out[n]===WEAK) { out[n]=STRONG; stack.push(n); }
+  }
+  const bin = new Uint8Array(w*h);
+  for (let i=0;i<bin.length;i++) bin[i] = (out[i]===STRONG)?1:0;
+  return bin;
+}
+function edgesToCanvas(bin, w, h) {
+  const c = newCanvas(w,h), ctx = ctx2d(c), id = ctx.createImageData(w,h), d = id.data;
+  for (let i=0;i<bin.length;i++) {
+    const v = bin[i] ? 255 : 0;
+    d[i*4+0]=v; d[i*4+1]=v; d[i*4+2]=v; d[i*4+3]=255;
+  }
+  ctx.putImageData(id,0,0);
+  return c;
+}
+
+function morphClose(bin, w, h, r=1) {
+  if (r<=0) return bin.slice();
+  const dil = new Uint8Array(w*h);
+  for (let y=0;y<h;y++) for (let x=0;x<w;x++) {
+    let v=0;
+    for (let j=-r;j<=r && !v;j++) for (let i=-r;i<=r;i++) {
+      const xx=x+i, yy=y+j;
+      if (xx>=0 && yy>=0 && xx<w && yy<h && bin[yy*w+xx]) { v=1; break; }
+    }
+    dil[y*w+x]=v;
+  }
+  const ero = new Uint8Array(w*h);
+  for (let y=0;y<h;y++) for (let x=0;x<w;x++) {
+    let v=1;
+    for (let j=-r;j<=r && v;j++) for (let i=-r;i<=r;i++) {
+      const xx=x+i, yy=y+j;
+      if (xx<0 || yy<0 || xx>=w || yy>=h || !dil[yy*w+xx]) { v=0; break; }
+    }
+    ero[y*w+x]=v;
+  }
+  return ero;
+}
+
+function detectGridLinesFromEdges(closed, w, h, votePeakRatio=0.5, clusterTol=2) {
+  const colVotes = new Uint32Array(w), rowVotes = new Uint32Array(h);
+  for (let x=0;x<w;x++) { let s=0; for (let y=0;y<h;y++) s+=closed[y*w+x]; colVotes[x]=s; }
+  for (let y=0;y<h;y++) { let s=0; for (let x=0;x<w;x++) s+=closed[y*w+x]; rowVotes[y]=s; }
+
+  const maxCol = Math.max(...colVotes), maxRow = Math.max(...rowVotes);
+  const colThresh = maxCol*votePeakRatio, rowThresh = maxRow*votePeakRatio;
+
+  const cols=[]; for (let x=0;x<w;x++) if (colVotes[x]>=colThresh) cols.push(x);
+  const rows=[]; for (let y=0;y<h;y++) if (rowVotes[y]>=rowThresh) rows.push(y);
+
+  const cluster1D = (arr,tol) => {
+    if (!arr.length) return [];
+    arr.sort((a,b)=>a-b);
+    const out=[]; let cur=[arr[0]];
+    for (let i=1;i<arr.length;i++) {
+      if (Math.abs(arr[i]-cur[cur.length-1])<=tol) cur.push(arr[i]);
+      else { out.push(cur); cur=[arr[i]]; }
+    }
+    out.push(cur);
+    return out.map(c=>Math.round(c.reduce((a,b)=>a+b,0)/c.length));
+  };
+
+  return { vLines: cluster1D(cols, clusterTol), hLines: cluster1D(rows, clusterTol),
+           colVotes, rowVotes, maxCol, maxRow };
+}
+
+function median(arr){ if(!arr.length)return 0; const a=arr.slice().sort((x,y)=>x-y), m=(a.length-1)/2; return a.length%2?a[m|0]:(a[m|0]+a[(m|0)+1])/2; }
+function mad(arr,med){ const d=arr.map(v=>Math.abs(v-med)).sort((a,b)=>a-b), m=(d.length-1)/2; return d.length%2?d[m|0]:(d[m|0]+d[(m|0)+1])/2; }
+function robustMedianSpacing(lines){
+  if (lines.length<2) return 0;
+  const diffs=[]; for (let i=1;i<lines.length;i++) diffs.push(lines[i]-lines[i-1]);
+  if (!diffs.length) return 0;
+  const m=median(diffs), s=mad(diffs,m)||1;
+  const f=diffs.filter(d=>Math.abs(d-m)<=2.5*s);
+  return Math.round(median(f.length?f:diffs));
+}
+function inferOffsetFromLines(lines, spacing, maxLen) {
+  if (spacing<=0) return 0;
+  let best=0, bestScore=-1;
+  for (let off=0; off<spacing; off++) {
+    let score=0;
+    for (const x of lines) {
+      const mod = ((x-off)%spacing + spacing)%spacing;
+      const d = Math.min(mod, spacing-mod);
+      score += spacing - d;
+    }
+    if (score>bestScore){ bestScore=score; best=off; }
+  }
+  return Math.max(0, Math.min(spacing-1, best));
+}
+function completeMesh(offset, spacing, maxLen){
+  if (spacing<=0) return [0, maxLen];
+  const lines=[]; let x=offset;
+  while (x<maxLen) { lines.push(x); x+=spacing; }
+  if (lines[0]!==0) lines.unshift(0);
+  if (lines[lines.length-1]!==maxLen) lines.push(maxLen);
+  return lines;
+}
+
+function kmeansQuantize(canvas, K=128, maxIters=10, sampleStride=4) {
+  const {width:w, height:h} = canvas;
+  const ctx = ctx2d(canvas);
+  const id = ctx.getImageData(0,0,w,h);
+  const d = id.data;
+
+  const pts = [];
+  for (let i=0; i<d.length; i += 4*sampleStride) {
+    if (d[i+3] === 0) continue;
+    pts.push([d[i], d[i+1], d[i+2]]);
+  }
+  if (!pts.length) return {palette:[[0,0,0]], indexed:new Uint32Array(w*h).fill(0xffffffff)};
+
+  const centers=[]; const used=new Set();
+  while (centers.length<Math.min(K,pts.length)) {
+    const idx=(Math.random()*pts.length)|0;
+    if(!used.has(idx)){ used.add(idx); centers.push(pts[idx].slice()); }
+  }
+  const assign=new Uint32Array(pts.length);
+  const dist2=(a,b)=>{ const dr=a[0]-b[0], dg=a[1]-b[1], db=a[2]-b[2]; return dr*dr+dg*dg+db*db; };
+  for (let it=0; it<maxIters; it++) {
+    let changed=0;
+    for (let i=0;i<pts.length;i++){
+      let best=0, bestD=Infinity;
+      for (let c=0;c<centers.length;c++){ const dd=dist2(pts[i],centers[c]); if(dd<bestD){bestD=dd; best=c;} }
+      if(assign[i]!==best){ assign[i]=best; changed++; }
+    }
+    const sums=Array.from({length:centers.length},()=>[0,0,0,0]);
+    for (let i=0;i<pts.length;i++){ const c=assign[i]; sums[c][0]+=pts[i][0]; sums[c][1]+=pts[i][1]; sums[c][2]+=pts[i][2]; sums[c][3]++; }
+    for (let c=0;c<centers.length;c++){ const s=sums[c]; if(s[3]>0) centers[c]=[s[0]/s[3], s[1]/s[3], s[2]/s[3]]; }
+    if (!changed) break;
+  }
+  const palette = centers.map(c=>[Math.round(c[0]),Math.round(c[1]),Math.round(c[2])]);
+
+  const indexed = new Uint32Array(w*h);
+  for (let p=0, i=0; p<indexed.length; p++, i+=4) {
+    if (d[i+3]===0){ indexed[p]=0xffffffff; continue; }
+    const color=[d[i],d[i+1],d[i+2]];
+    let best=0, bestD=Infinity;
+    for (let c=0;c<palette.length;c++){
+      const cc=palette[c]; const dr=color[0]-cc[0], dg=color[1]-cc[1], db=color[2]-cc[2];
+      const dd=dr*dr+dg*dg+db*db;
+      if(dd<bestD){ bestD=dd; best=c; }
+    }
+    indexed[p]=best;
+  }
+  return { palette, indexed };
+}
+function renderQuantizedToCanvas(palette, indexed, w, h) {
+  const c = newCanvas(w,h), ctx = ctx2d(c), id = ctx.createImageData(w,h), d = id.data;
+  for (let p=0; p<indexed.length; p++) {
+    const j=p*4, idx=indexed[p];
+    if (idx===0xffffffff){ d[j]=d[j+1]=d[j+2]=0; d[j+3]=0; continue; }
+    const [r,g,b] = palette[idx];
+    d[j]=r; d[j+1]=g; d[j+2]=b; d[j+3]=255;
+  }
+  ctx.putImageData(id,0,0);
+  return c;
+}
+
+function reconstructPixelArt(quantizedIndex, palette, w, h, vMesh, hMesh, targetW, targetH) {
+  const xs = vMesh.slice().sort((a,b)=>a-b);
+  const ys = hMesh.slice().sort((a,b)=>a-b);
+  if (xs[0]!==0) xs.unshift(0); if (xs[xs.length-1]!==w) xs.push(w);
+  if (ys[0]!==0) ys.unshift(0); if (ys[ys.length-1]!==h) ys.push(h);
+
+  const outW = xs.length-1, outH = ys.length-1;
+  const lowIdx = new Uint32Array(outW*outH);
+
+  for (let j=0;j<outH;j++) {
+    const y0=ys[j], y1=ys[j+1];
+    for (let i=0;i<outW;i++) {
+      const x0=xs[i], x1=xs[i+1];
+      const counts = new Map();
+      for (let y=y0; y<y1; y++) {
+        let p=y*w + x0;
+        for (let x=x0; x<x1; x++,p++) {
+          const idx=quantizedIndex[p];
+          if (idx===0xffffffff) continue;
+          counts.set(idx, (counts.get(idx)||0)+1);
+        }
+      }
+      let best=0, bestC=-1;
+      for (const [k,v] of counts) if (v>bestC) { bestC=v; best=k; }
+      lowIdx[j*outW+i] = best;
+    }
+  }
+
+  const low = newCanvas(outW, outH);
+  const lctx = ctx2d(low);
+  const lid = lctx.createImageData(outW, outH);
+  const ld = lid.data;
+  for (let p=0;p<lowIdx.length;p++) {
+    const j=p*4, idx=lowIdx[p];
+    if (idx===0xffffffff){ ld[j]=ld[j+1]=ld[j+2]=0; ld[j+3]=0; continue; }
+    const [r,g,b]=palette[idx];
+    ld[j]=r; ld[j+1]=g; ld[j+2]=b; ld[j+3]=255;
+  }
+  lctx.putImageData(lid,0,0);
+
+  const up = newCanvas(targetW, targetH);
+  const uctx = ctx2d(up);
+  uctx.imageSmoothingEnabled = false;
+  uctx.drawImage(low, 0, 0, targetW, targetH);
+
+  return { low, up };
+}
+
+function overlayGridOnCanvas(base, vLines, hLines, color="rgba(255,0,0,0.9)") {
+  const c = newCanvas(base.width, base.height);
+  const ctx = ctx2d(c);
+  ctx.drawImage(base, 0, 0);
+  ctx.save();
+  ctx.fillStyle = color;
+  for (const x of vLines) ctx.fillRect(x, 0, 1, c.height);
+  for (const y of hLines) ctx.fillRect(0, y, c.width, 1);
+  ctx.restore();
+  return c;
+}
+function overlayDetectedLinesOnEdges(edgesCanvas, vLines, hLines) {
+  const c = newCanvas(edgesCanvas.width, edgesCanvas.height);
+  const ctx = ctx2d(c);
+  ctx.drawImage(edgesCanvas, 0, 0);
+  ctx.save();
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = "rgba(0,255,0,0.9)";
+  for (const x of vLines) ctx.fillRect(x, 0, 1, c.height);
+  ctx.fillStyle = "rgba(255,128,0,0.9)";
+  for (const y of hLines) ctx.fillRect(0, y, c.width, 1);
+  ctx.restore();
+  return c;
+}
+
+/* ============================================================
+   Pipeline
+============================================================ */
+async function processPipeline(img) {
+  const K = clampInt(parseInt(kEl.value,10), 2, 256) || 128;
+  const high = clamp(parseFloat(edgeHighEl.value), 0.01, 1.0) || 0.20;
+  const lowRatio  = clamp(parseFloat(edgeLowEl.value),  0.01, 1.0) || 0.08;
+  const r    = clampInt(parseInt(morphREl.value,10), 0, 8) || 1;
+  const voteRatio = clamp(parseFloat(voteRatioEl.value), 0.1, 0.95) || 0.50;
+  const clusterTol= clampInt(parseInt(clusterTolEl.value,10), 0, 16) || 2;
+  const useManual = !!manualGridEl.checked;
+
+  const orig = drawImageToCanvas(img);
+  addStep('Original', orig);
+
+  const trimmed = trimAndAlphaClean(orig);
+  addStep('Trimmed & Alpha Clean', trimmed.canvas, 'alpha<50% → 0');
+
+  const up2 = upscale2xNN(trimmed.canvas);
+  addStep('Upscaled ×2 (Nearest Neighbor)', up2);
+
+  const gray = toGrayscaleFloat(up2);
+  const blur = gaussianBlurSeparable(gray);
+  const {mag, ang} = sobel(gray, blur);
+  const nms = nonMaxSuppression(gray, mag, ang);
+  const edgesBin = doubleThreshold(gray, nms, high, lowRatio);
+  const edgesCanvas = edgesToCanvas(edgesBin, up2.width, up2.height);
+  addStep('Canny Edges', edgesCanvas, `high=${toStr(high)}, low=${toStr(lowRatio)}`);
+
+  const closed = morphClose(edgesBin, up2.width, up2.height, r);
+  const closedCanvas = edgesToCanvas(closed, up2.width, up2.height);
+  addStep('Morphological Closing', closedCanvas, `radius=${r}`);
+
+  const {vLines:vRaw, hLines:hRaw} =
+    detectGridLinesFromEdges(closed, up2.width, up2.height, voteRatio, clusterTol);
+  const linesOverlay = overlayDetectedLinesOnEdges(closedCanvas, vRaw, hRaw);
+  addStep('Detected Line Candidates', linesOverlay, `peaks≥${toStr(voteRatio)}, cluster±${clusterTol}`);
+
+  let vSpacing = robustMedianSpacing(vRaw);
+  let hSpacing = robustMedianSpacing(hRaw);
+  let vOffset  = inferOffsetFromLines(vRaw, vSpacing||0, up2.width);
+  let hOffset  = inferOffsetFromLines(hRaw, hSpacing||0, up2.height);
+
+  if (useManual) {
+    const mvx = clampInt(parseInt(vxEl.value,10), 0, up2.width) || vSpacing || up2.width;
+    const mvy = clampInt(parseInt(vyEl.value,10), 0, up2.height) || hSpacing || up2.height;
+    const mox = clampInt(parseInt(offXEl.value,10), 0, Math.max(0, mvx-1)) || 0;
+    const moy = clampInt(parseInt(offYEl.value,10), 0, Math.max(0, mvy-1)) || 0;
+    vSpacing = mvx; hSpacing = mvy; vOffset = mox; hOffset = moy;
+  } else {
+    vxEl.value = vSpacing || 0;
+    vyEl.value = hSpacing || 0;
+    offXEl.value = vOffset || 0;
+    offYEl.value = hOffset || 0;
+  }
+
+  const vMesh = completeMesh(vOffset, vSpacing || up2.width, up2.width);
+  const hMesh = completeMesh(hOffset, hSpacing || up2.height, up2.height);
+  const meshOverlay = overlayGridOnCanvas(up2, vMesh, hMesh, "rgba(255,0,0,0.9)");
+  addStep('Completed Mesh Overlay', meshOverlay, `vx=${vSpacing||'?'}, vy=${hSpacing||'?'}, off=(${vOffset},${hOffset})`);
+
+  detMeta.textContent = `vx=${vSpacing||'?'}, vy=${hSpacing||'?'}, off=(${vOffset}, ${hOffset})`;
+  useMeta.textContent = useManual ? 'manual' : 'auto';
+
+  const {palette, indexed} = kmeansQuantize(up2, K, 10, 4);
+  const quantCanvas = renderQuantizedToCanvas(palette, indexed, up2.width, up2.height);
+  addStep('Quantized Colors', quantCanvas, `K=${palette.length}`);
+
+  const { low, up } = reconstructPixelArt(
+    indexed, palette, up2.width, up2.height, vMesh, hMesh,
+    trimmed.canvas.width, trimmed.canvas.height
+  );
+  addStep('Pixel Art (1:1 cells)', low, `${low.width}×${low.height}`);
+  addStep('Pixel Art (Upscaled to original size)', up, `${up.width}×${up.height}`);
+}
+
+/* ============================================================
+   Helpers
+============================================================ */
+function clamp(v, a, b){ return Math.max(a, Math.min(b, v)); }
+function clampInt(v, a, b){ if (Number.isNaN(v)) return a; return Math.max(a, Math.min(b, v|0)); }
+function toStr(n){ return (Math.round(n*100)/100).toFixed(2); }
+</script>
+</body>
+</html>
