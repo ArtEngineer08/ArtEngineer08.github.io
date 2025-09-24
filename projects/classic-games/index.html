@@ -4,28 +4,66 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Classic Games — Collection</title>
+  <meta name="description" content="Modern UI remakes and tabletop sandboxes." />
   <style>
     :root { --max: 980px }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 28px; display:flex; justify-content:center }
+    * { box-sizing: border-box }
+
+    /* light/dark base */
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 28px; display:flex; justify-content:center;
+      background:#f4f4f4; color:#111;
+      transition: background-color .25s ease, color .25s ease, border-color .25s ease;
+    }
+    body.dark { background:#1f1f1f; color:#f5f5f5; }
+
     .wrap { width:100%; max-width: var(--max) }
-    a { color: inherit; text-decoration: none }
-    header { margin-bottom: 8px }
+    a { color:inherit; text-decoration:none }
+
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:8px }
+    .left { display:flex; align-items:center; gap:12px }
+    .sub { color:#666; margin:0 0 16px }
+    body.dark .sub { color:#c9c9c9 }
+
     .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:16px }
-    .card { display:block; border:1px solid #e8e8e8; border-radius:14px; overflow:hidden; transition: transform .06s ease, box-shadow .06s ease }
+    .card { border:1px solid #e8e8e8; border-radius:14px; overflow:hidden; transition: transform .06s ease, box-shadow .06s ease, border-color .25s ease, background .25s ease; background:#fff }
     .card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.06) }
-    .thumb { aspect-ratio: 16/9; width:100%; object-fit: cover; background:#f6f6f6 }
+    .thumb { aspect-ratio:16/9; width:100%; object-fit:cover; background:#f0f0f0 }
     .inner { padding:12px 14px }
-    .title { margin:0 0 6px; font-size: 18px; font-weight: 650 }
+    .title { margin:0 0 6px; font-size:18px; font-weight:650 }
     .meta { color:#666; font-size:12px }
+    body.dark .card { border-color:#3a3a3a; background:#222 }
+    body.dark .meta { color:#c9c9c9 }
+
+    /* dark-mode switch */
+    .switch-wrap { display:flex; align-items:center; gap:14px }
+    .theme-switch {
+      position: relative; width: 90px; height: 32px; border-radius: 16px;
+      background:#ccc; border:1px solid #aaa; display:inline-flex; align-items:center;
+      justify-content:space-between; padding:0 10px; cursor:pointer; user-select:none; gap:6px;
+    }
+    .theme-switch span { font-size:12px; line-height:1; pointer-events:none }
+    .switch-dot { position:absolute; top:2px; left:2px; width:28px; height:28px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); transition: transform .25s ease; }
+    body.dark .switch-dot { transform: translateX(58px); }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <a href="../../">← Back to portfolio</a>
-      <h1>Classic Games</h1>
-      <p>Modern UI remakes & tabletop sandboxes.</p>
+      <div class="left">
+        <a href="../../">← Back to portfolio</a>
+        <h1 style="margin:0">Classic Games</h1>
+      </div>
+      <div class="switch-wrap">
+        <div class="theme-switch" id="theme-switch" role="button" aria-label="Toggle dark mode" aria-pressed="false" tabindex="0">
+          <span>Light</span>
+          <div class="switch-dot"></div>
+          <span>Dark</span>
+        </div>
+      </div>
     </header>
+    <p class="sub">Modern UI remakes & tabletop sandboxes.</p>
 
     <section class="grid">
       <a class="card" href="farkle/">
@@ -64,5 +102,30 @@
       </a>
     </section>
   </div>
+
+  <script>
+  // Dark-mode toggle (persists; respects system as default)
+  (() => {
+    const STORAGE_KEY = 'portfolioDarkMode';
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const shouldDark = saved === null ? prefersDark : saved === 'true';
+    if (shouldDark) document.body.classList.add('dark');
+
+    const btn = document.getElementById('theme-switch');
+    const setPressed = () => btn.setAttribute('aria-pressed', document.body.classList.contains('dark') ? 'true' : 'false');
+    setPressed();
+
+    function toggle() {
+      document.body.classList.toggle('dark');
+      localStorage.setItem(STORAGE_KEY, document.body.classList.contains('dark'));
+      setPressed();
+    }
+    btn.addEventListener('click', toggle);
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+  })();
+  </script>
 </body>
 </html>
