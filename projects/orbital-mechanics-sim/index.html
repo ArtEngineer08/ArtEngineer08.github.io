@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Orbital Tank Shooter</title>
+  <style>
+    canvas {
+      background: black;
+      display: block;
+      margin: 0 auto;
+    }
+    .controls {
+      text-align: center;
+      margin-top: 10px;
+    }
+    .controls label {
+      margin: 0 10px;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas" width="1600" height="1600"></canvas>
+
+  <!-- Angle Controls -->
+  <div class="controls">
+    <label>
+      Tank Angle:
+      <input
+        id="tankAngleInput"
+        type="number"
+        step="0.00001"
+        style="width: 100px;"
+      />
+    </label>
+    <label>
+      Turret Offset:
+      <input
+        id="turretOffsetInput"
+        type="number"
+        step="0.00001"
+        style="width: 100px;"
+      />
+    </label>
+  </div>
+
+  <script>
+    // Get canvas and context
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    // Define Earth parameters
+    const earth = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      radius: 100,
+      mu: 150 // Earth's gravitational parameter
+    };
+
+    // Define Tank parameters
+    let tank = {
+      angle: 1.5555,               // Angle along Earth's circumference (in radians)
+      turretOffset:0.07967,        // Relative turret angle (in radians)
+      speed: 0.000000003,          // Angular speed per frame (for left/right movement)
+      turretRotateSpeed: 0.000000005 // How fast the turret rotates with up/down keys
+    };
+
+    // Define Moon parameters
+    let moon = {
+      orbitRadius: 350,       // Distance from Earth's center
+      angle: 0.40,               // Current orbital angle
+      angularSpeed: -0.000005,    // Orbital speed (radians per frame)
+      radius: 16,             // Moon's visual radius
+      mu: 20,                 // Moon's gravitational parameter (added for bullet gravity)
+      craters: [
+        { x: -5, y: -3, r: 6 },
+        { x: 4,  y: -7, r: 4 },
+        { x: 5,  y: 3,  r: 5 }
+      ]
+    };
+
+    // Score variable
+    let score = 0;
+
+    // Message variables
+    let hitMessage = "";
+    let hitMessageTimer = 0;
+    const HIT_MESSAGE_DURATION = 300; // Duration in frames (~3 seconds at 60fps)
+
+    // Bullets array
+    let bullets = [];
+
+    // Firing toggle and timer
+    let isFiring = true;         // true = auto-firing, false = not firing
+    let framesSinceLastShot = 0;  // count frames to time 1 shot/sec
+
+    // Key controls
+    let keysPressed = {};
+    document.addEventListener('keydown', (e) => {
+      // Toggle firing on/off with X (no repeat toggling)
+      if ((e.key === 'x' || e.key === 'X') && !e.repeat) {
+        isFiring = !isFiring;  // Toggle
+      }
+      keysPressed[e.key] = true;
+    });
+
+    document.addEventListener('keyup', (e) => {
+      keysPressed[e.key] = false;
+    });
+
+    // Hook up inputs to the tank angles
+    const tankAngleInput = document.getElementById('tankAngleInput');
+    const turretOffsetInput = document.getElementById('turretOffsetInput');
+
+    // Initialize input fields to current tank values
+    tankAngleInput.value = tank.angle.toFixed(5);
+    turretOffsetInput.value = tank.turretOffset.toFixed(5);
+
+    // When inputs change, update the tank/turret angles
+    tankAngleInput.addEventListener('change', () => {
+      const val = parseFloat(tankAngleInput.value);
+      if (!isNaN(val)) {
+        tank.angle = val;
+      }
+    });
+
+    turretOffsetInput.addEventListener('change', () => {
+      const val = parseFloat(turretOffsetInput.value);
+      if (!isNaN(val)) {
+        tank.turretOffset = val;
+      }
+    });
+
+    // Function to fire a bullet (single shot)
+    function fireBullet() {
+      // Compute tank position on Earth's circumference
+      const tankPos = {
+        x: earth.x + earth.radius * Math.cos(tank.angle),
+        y: earth.y + earth.radius * Math.sin(tank.angle)
+      };
+      // Compute the tank's default tangent direction (clockwise => angle - π/2)
+      const defaultTangent = tank.angle - Math.PI / 2;
+      // The cannon's firing angle is the default plus the turret offset
+      const turretAngle = defaultTangent + tank.turretOffset;
+
+      // Determine the tip of the cannon (offset from the tank)
+      const cannonLength = 20;
+      const bulletPos = {
+        x: tankPos.x + cannonLength * Math.cos(turretAngle),
+        y: tankPos.y + cannonLength * Math.sin(turretAngle)
+      };
+
+      // Set the initial bullet speed and velocity components
+      const bulletSpeed = 1.5;
+      const bulletVelocity = {
+        x: bulletSpeed * Math.cos(turretAngle),
+        y: bulletSpeed * Math.sin(turretAngle)
+      };
+
+      // Add the new bullet to the bullets array
+      bullets.push({
+        x: bulletPos.x,
+        y: bulletPos.y,
+        vx: bulletVelocity.x,
+        vy: bulletVelocity.y,
+        radius: 3
+      });
+    }
+
+    // Update game objects
+    function update() {
+      // Tank movement
+      if (keysPressed['ArrowLeft']) {
+        // Move counterclockwise (increase angle)
+        tank.angle += tank.speed;
+      }
+      if (keysPressed['ArrowRight']) {
+        // Move clockwise (decrease angle)
+        tank.angle -= tank.speed;
+      }
+
+      // Turret aiming
+      if (keysPressed['ArrowUp']) {
+        tank.turretOffset -= tank.turretRotateSpeed;
+      }
+      if (keysPressed['ArrowDown']) {
+        tank.turretOffset += tank.turretRotateSpeed;
+      }
+
+      // Moon's orbit
+      moon.angle += moon.angularSpeed;
+
+      // Handle auto-firing once per second (~60 frames)
+      if (isFiring) {
+        framesSinceLastShot++;
+        if (framesSinceLastShot >= 10) {
+          fireBullet();
+          framesSinceLastShot = 0;
+        }
+      }
+
+      // --- Update Bullets with gravitational effects ---
+      const moonPos = {
+        x: earth.x + moon.orbitRadius * Math.cos(moon.angle),
+        y: earth.y + moon.orbitRadius * Math.sin(moon.angle)
+      };
+
+      for (let bullet of bullets) {
+        // Gravity from Earth
+        const dxEarth = bullet.x - earth.x;
+        const dyEarth = bullet.y - earth.y;
+        const rE = Math.sqrt(dxEarth * dxEarth + dyEarth * dyEarth);
+        const axEarth = -earth.mu * dxEarth / (rE * rE * rE);
+        const ayEarth = -earth.mu * dyEarth / (rE * rE * rE);
+
+        // Gravity from Moon
+        const dxMoon = bullet.x - moonPos.x;
+        const dyMoon = bullet.y - moonPos.y;
+        const rM = Math.sqrt(dxMoon * dxMoon + dyMoon * dyMoon);
+        if (rM > 0) {
+          const axMoon = -moon.mu * dxMoon / (rM * rM * rM);
+          const ayMoon = -moon.mu * dyMoon / (rM * rM * rM);
+          bullet.vx += (axEarth + axMoon);
+          bullet.vy += (ayEarth + ayMoon);
+        } else {
+          // Very rare edge case if bullet is exactly at Moon center
+          bullet.vx += axEarth;
+          bullet.vy += ayEarth;
+        }
+
+        // Update bullet position
+        bullet.x += bullet.vx;
+        bullet.y += bullet.vy;
+      }
+
+      // Remove bullets that leave the screen
+      bullets = bullets.filter(bullet =>
+        bullet.x > 0 && bullet.x < canvas.width &&
+        bullet.y > 0 && bullet.y < canvas.height
+      );
+
+      // Collision Checks
+      for (let bullet of bullets) {
+        // Earth
+        const dxEarth = bullet.x - earth.x;
+        const dyEarth = bullet.y - earth.y;
+        const distEarth = Math.sqrt(dxEarth * dxEarth + dyEarth * dyEarth);
+        if (distEarth < earth.radius) {
+          bullet.hit = true;
+        }
+
+        // Moon
+        const dxM = bullet.x - moonPos.x;
+        const dyM = bullet.y - moonPos.y;
+        const distMoon = Math.sqrt(dxM * dxM + dyM * dyM);
+        if (distMoon < bullet.radius + moon.radius) {
+          score += 5;
+          hitMessage = "You hit the moon!";
+          hitMessageTimer = HIT_MESSAGE_DURATION;
+          bullet.hit = true;
+        }
+      }
+      bullets = bullets.filter(bullet => !bullet.hit);
+
+      // Decrease hit message timer
+      if (hitMessageTimer > 0) {
+        hitMessageTimer--;
+        if (hitMessageTimer <= 0) {
+          hitMessage = "";
+        }
+      }
+
+      // Continuously sync the angle inputs to reflect any changes from keys
+      tankAngleInput.value = tank.angle.toFixed(5);
+      turretOffsetInput.value = tank.turretOffset.toFixed(5);
+    }
+
+    // Draw game objects
+    function draw() {
+      // Clear canvas
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // --- Draw Earth ---
+      ctx.fillStyle = 'blue';
+      ctx.beginPath();
+      ctx.arc(earth.x, earth.y, earth.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // --- Draw Moon ---
+      const moonPos = {
+        x: earth.x + moon.orbitRadius * Math.cos(moon.angle),
+        y: earth.y + moon.orbitRadius * Math.sin(moon.angle)
+      };
+      ctx.fillStyle = 'lightgray';
+      ctx.beginPath();
+      ctx.arc(moonPos.x, moonPos.y, moon.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Draw the craters
+      ctx.fillStyle = 'darkgray';
+      for (let crater of moon.craters) {
+        ctx.beginPath();
+        ctx.arc(moonPos.x + crater.x, moonPos.y + crater.y, crater.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // --- Draw Tank ---
+      const tankPos = {
+        x: earth.x + earth.radius * Math.cos(tank.angle),
+        y: earth.y + earth.radius * Math.sin(tank.angle)
+      };
+      ctx.fillStyle = 'green';
+      ctx.beginPath();
+      ctx.arc(tankPos.x, tankPos.y, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      // --- Draw Tank's Turret ---
+      const defaultTangent = tank.angle - Math.PI / 2;
+      const turretAngle = defaultTangent + tank.turretOffset;
+      const cannonLength = 20;
+      ctx.strokeStyle = 'yellow';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(tankPos.x, tankPos.y);
+      ctx.lineTo(
+        tankPos.x + cannonLength * Math.cos(turretAngle),
+        tankPos.y + cannonLength * Math.sin(turretAngle)
+      );
+      ctx.stroke();
+
+      // --- Draw Bullets ---
+      ctx.fillStyle = 'red';
+      for (let bullet of bullets) {
+        ctx.beginPath();
+        ctx.arc(bullet.x, bullet.y, bullet.radius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // --- Draw Score ---
+      ctx.fillStyle = 'white';
+      ctx.font = '24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText("Bullets: " + bullets.length, canvas.width / 2, 30);
+
+      // --- Draw Hit Message ---
+      if (hitMessageTimer > 0) {
+        let alpha = hitMessageTimer / HIT_MESSAGE_DURATION;
+        ctx.fillStyle = "rgba(255, 255, 255, " + alpha + ")";
+        ctx.font = "48px sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(hitMessage, canvas.width / 2, 60);
+      }
+    }
+
+    // Main game loop
+    function gameLoop() {
+      for(var i = 0; i < 100; i++){
+		update();
+	  }
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    // Start
+    gameLoop();
+  </script>
+</body>
+</html>
