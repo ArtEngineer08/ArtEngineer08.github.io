@@ -1,0 +1,2052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>SVG Icon Viewer v1.1</title>
+<style>
+  :root{
+    --bg:#0b0d10; --panel:#12151a; --muted:#9aa4b2; --text:#e6eef7; --accent:#7c9cff;
+    --card:#171b22; --card2:#1c2129; --chip:#0e1116; --border:#2b3340;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0; background:linear-gradient(180deg,#0b0d10 0%,#0e131a 100%); color:var(--text); font:14px/1.4 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji"}
+  a{color:var(--accent); text-decoration:none}
+  .wrap{display:flex; flex-direction:column; min-height:100%}
+  header{position:sticky; top:0; z-index:10; backdrop-filter:saturate(1.2) blur(8px); background:linear-gradient(180deg, rgba(18,21,26,.9) 0%, rgba(18,21,26,.6) 100%); border-bottom:1px solid var(--border)}
+  .bar{max-width:1100px; margin:0 auto; padding:12px 16px; display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center}
+  h1{margin:0; font-size:16px; letter-spacing:.4px}
+  .controls{display:flex; flex-wrap:wrap; gap:8px 10px; align-items:center}
+  .btn{display:inline-flex; align-items:center; gap:8px; padding:8px 10px; background:var(--card); border:1px solid var(--border); border-radius:10px; color:var(--text); cursor:pointer}
+  .btn:hover{background:var(--card2)}
+  .btn.secondary{background:transparent}
+  input[type="file"]{display:none}
+  .search{min-width:220px; flex:1; display:flex; align-items:center; gap:8px; background:var(--card); border:1px solid var(--border); border-radius:10px; padding:8px 10px}
+  .search input{background:transparent; border:0; outline:0; color:var(--text); width:100%}
+  .chips{display:flex; gap:8px; align-items:center}
+  .chip{background:var(--chip); border:1px solid var(--border); color:var(--muted); padding:6px 8px; border-radius:8px}
+
+  .dropzone{max-width:1100px; margin:16px auto 0; border:1px dashed var(--border); border-radius:12px; padding:16px; text-align:center; color:var(--muted)}
+  .dropzone.drag{border-color:var(--accent); background:rgba(124,156,255,.06); color:#cfe1ff}
+
+  .grid{max-width:1100px; margin:14px auto 40px; display:grid; gap:12px; grid-template-columns:repeat(auto-fill, minmax(140px,1fr))}
+  .card{display:flex; flex-direction:column; gap:8px; padding:10px; background:var(--card); border:1px solid var(--border); border-radius:14px; cursor:pointer; transition:transform .12s ease; { color: var(--text); };.name { color: var(--text); }}
+  .card:hover{transform:translateY(-2px); background:var(--card2)}
+  .thumb{background:linear-gradient(180deg,#0f1217,#0a0c10); border:1px solid var(--border); border-radius:10px; aspect-ratio:1/1; display:flex; align-items:center; justify-content:center; overflow:hidden}
+  .thumb img{max-width:80%; max-height:80%; filter:drop-shadow(0 1px 0 #0004)}
+  .meta{display:flex; justify-content:space-between; gap:8px; align-items:center}
+  .name{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .dim{color:var(--muted); font-size:12px; display: none !important; }
+
+  .footer{max-width:1100px; margin:0 auto 32px; color:var(--muted); opacity:.9; padding:0 16px}
+
+  /* Modal viewer: keep above header, solid dark bg (no blur/checkerboard) */
+  .modal{position:fixed; inset:0; z-index:1000; background:#0e1116; backdrop-filter:none; display:none}
+  .modal.open{display:grid; grid-template-rows:auto 1fr}
+  .mbar{position:sticky; top:0; z-index:1; display:flex; gap:8px; align-items:center; padding:10px 12px; background:var(--panel); border-bottom:1px solid var(--border)}
+  .mbar .title{flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+  .mbar .sep{width:1px; height:22px; background:var(--border); margin:0 6px}
+  .viewer{position:relative; overflow:hidden}
+  .canvas{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:#10141b}
+  .stage{transform-origin:center center; will-change:transform}
+  .stage svg{max-width:none; max-height:none}
+
+  .slider{appearance:none; height:6px; background:#2a3240; border-radius:999px; outline:none}
+  .slider::-webkit-slider-thumb{appearance:none; width:16px; height:16px; border-radius:50%; background:var(--accent); border:2px solid #25314a}
+
+  .pill{display:inline-flex; align-items:center; gap:6px; padding:6px 10px; background:#10141b; border:1px solid var(--border); border-radius:999px}
+  .state{color:var(--muted); font-size:12px}
+
+  .hidden{display:none}
+  body.modal-open{overflow:hidden}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="bar">
+      <h1>SVG Icon Viewer</h1>
+      <div class="controls">
+        <label class="btn" title="Open SVG files">
+          <input id="file-input" type="file" accept=".svg" multiple>
+          📂 Open SVGs
+        </label>
+        <button class="btn secondary" id="demo-btn" title="Load demo icons">✨ Load Demo</button>
+        <div class="search" title="Filter by file name">
+          <span>🔎</span>
+          <input id="q" placeholder="Search filenames..." />
+        </div>
+        <div class="chips">
+          <div class="chip"><span id="count">0</span> items</div>
+          <div class="chip">Thumb size <input id="size" type="range" min="100" max="220" value="140" style="vertical-align:middle; width:120px" class="slider"></div>
+        </div>
+      </div>
+      <div class="controls">
+        <span class="state" id="hint">Drop .svg files anywhere</span>
+      </div>
+    </div>
+  </header>
+
+  <div id="drop" class="dropzone">Drag & drop SVGs here, or use “Open SVGs”. Your files never leave your browser.</div>
+  <main id="grid" class="grid"></main>
+  <div class="footer">Tip: Click a thumbnail to open the high-res viewer. Zoom with the slider or mouse wheel; drag to pan; press <b>F</b> to fit, <b>1</b> for 100%, <b>Esc</b> to close.</div>
+
+  <!-- Modal -->
+  <div id="modal" class="modal" aria-hidden="true" role="dialog">
+    <div class="mbar">
+      <button class="btn" id="close">✖</button>
+      <div class="title" id="m-title">—</div>
+      <div class="pill">Zoom <input id="zoom" class="slider" type="range" min="10" max="800" value="100" style="width:160px"> <span id="zoomv" class="state">100%</span></div>
+      <button class="btn" id="zout" title="Zoom out">−</button>
+      <button class="btn" id="zin" title="Zoom in">+</button>
+      <button class="btn" id="fit" title="Fit to screen">Fit</button>
+      <button class="btn" id="one" title="Actual size">1:1</button>
+      <span class="sep"></span>
+      <button class="btn" id="bg1" title="Checkerboard bg">🧇 BG</button>
+      <button class="btn" id="bg2" title="Dark bg">🌑</button>
+      <button class="btn" id="bg3" title="Light bg">🌕</button>
+      <span class="sep"></span>
+      <button class="btn" id="copy" title="Copy SVG markup">📋 Copy</button>
+      <button class="btn" id="save" title="Download original SVG">⬇️ SVG</button>
+      <div class="pill" title="Export a high-res PNG render">
+        PNG <input id="pngsize" type="number" min="64" max="4096" step="64" value="1024" style="width:80px; background:transparent; border:0; color:var(--text)">px
+        <button class="btn" id="export">Export</button>
+      </div>
+    </div>
+    <div class="viewer" id="viewer">
+      <div class="canvas" id="canvas">
+        <div class="stage" id="stage"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const $ = sel => document.querySelector(sel);
+  const grid = $('#grid');
+  const drop = $('#drop');
+  const input = $('#file-input');
+  const size = $('#size');
+  const count = $('#count');
+  const q = $('#q');
+  const hint = $('#hint');
+
+  const modal = $('#modal');
+  const closeBtn = $('#close');
+  const stage = $('#stage');
+  const canvas = $('#canvas');
+  const mTitle = $('#m-title');
+  const zoom = $('#zoom');
+  const zoomv = $('#zoomv');
+  const zin = $('#zin');
+  const zout = $('#zout');
+  const fitBtn = $('#fit');
+  const oneBtn = $('#one');
+  const copyBtn = $('#copy');
+  const saveBtn = $('#save');
+  const exportBtn = $('#export');
+  const pngSize = $('#pngsize');
+  const bg1 = $('#bg1'), bg2 = $('#bg2'), bg3 = $('#bg3');
+  const demoBtn = $('#demo-btn');
+
+  let items = []; // {name, dataURL, svgText, width, height, viewBox}
+  let filtered = [];
+  let currentIndex = -1;
+  let stageScale = 1, offsetX = 0, offsetY = 0; // for pan/zoom
+
+  // Sanitize incoming SVG markup (strip <script> and on* handlers, javascript: hrefs)
+  function sanitizeSVG(text){
+    try{
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(text, 'image/svg+xml');
+      doc.querySelectorAll('script').forEach(n => n.remove());
+      const tree = doc.getElementsByTagName('*');
+      for (let el of tree){
+        [...el.attributes].forEach(a => {
+          const v = (a.value||'').trim();
+          const n = a.name.toLowerCase();
+          if(n.startsWith('on')) el.removeAttribute(a.name);
+          if((n==='href' || n==='xlink:href') && v.toLowerCase().startsWith('javascript:')) el.removeAttribute(a.name);
+        });
+      }
+      return new XMLSerializer().serializeToString(doc.documentElement);
+    }catch(e){
+      console.warn('sanitize failed', e);
+      return text;
+    }
+  }
+
+  function parseDims(svgText){
+    const mVB = svgText.match(/viewBox\s*=\s*"([^"]+)"/i);
+    let vb = mVB ? mVB[1].trim().split(/\s+/).map(Number) : null; // [minx, miny, w, h]
+    let w = 64, h = 64;
+    if(vb && vb.length===4){ w = vb[2]; h = vb[3]; }
+    const mw = svgText.match(/\bwidth\s*=\s*"(\d+(?:\.\d+)?)/i);
+    const mh = svgText.match(/\bheight\s*=\s*"(\d+(?:\.\d+)?)/i);
+    if(mw) w = parseFloat(mw[1]);
+    if(mh) h = parseFloat(mh[1]);
+    return {w,h, vb: vb?vb.join(' '):null};
+  }
+
+  function fileToItem(file){
+    return new Promise((resolve,reject)=>{
+      const reader = new FileReader();
+      reader.onload = () => {
+        const raw = String(reader.result);
+        const svgText = sanitizeSVG(raw);
+        const {w,h,vb} = parseDims(svgText);
+        const blob = new Blob([svgText], {type:'image/svg+xml'});
+        const url = URL.createObjectURL(blob);
+        resolve({name:file.name, svgText, dataURL:url, width:w, height:h, viewBox: vb});
+      };
+      reader.onerror = reject;
+      reader.readAsText(file);
+    });
+  }
+
+  function renderGrid(){
+	  const query = (q.value||'').toLowerCase();
+	  filtered = items.filter(it => it.name.toLowerCase().includes(query));
+	  count.textContent = filtered.length;
+	  grid.style.gridTemplateColumns = `repeat(auto-fill, minmax(${size.value}px, 1fr))`;
+	  grid.innerHTML = '';
+	  for (let i = 0; i < filtered.length; i++) {
+		const it = filtered[i];
+		const card = document.createElement('button');
+		card.className = 'card';
+		card.setAttribute('data-i', i);
+
+		// display name without .svg
+		const displayName = it.name.replace(/\.svg$/i, '');
+
+		// no dimensions in grid meta
+		card.innerHTML = `
+		  <div class="thumb"><img alt="${displayName}" src="${it.dataURL}"></div>
+		  <div class="meta">
+			<div class="name" title="${displayName}">${displayName}</div>
+		  </div>
+		`;
+		card.addEventListener('click', ()=> openModal(i));
+		grid.appendChild(card);
+	  }
+	}
+
+
+  function openModal(i){
+    currentIndex = i;
+    const it = filtered[i];
+    mTitle.textContent = it.name + (it.viewBox? ` • viewBox ${it.viewBox}` : ` • ${it.width}×${it.height}`);
+    stage.innerHTML = it.svgText; // inline for crisp scaling
+
+    // Give viewBox-only SVGs a concrete CSS box so fit math is stable
+    const svg = stage.querySelector('svg');
+    if (svg && svg.hasAttribute('viewBox') && (!svg.hasAttribute('width') || !svg.hasAttribute('height'))) {
+      const a = svg.getAttribute('viewBox').trim().split(/\s+/).map(Number);
+      if (a.length === 4 && isFinite(a[2]) && isFinite(a[3])) {
+        svg.style.width  = a[2] + 'px';
+        svg.style.height = a[3] + 'px';
+      }
+    }
+
+    stageScale = 1; offsetX = 0; offsetY = 0; applyTransform();
+    zoom.value = 100; zoomv.textContent = '100%';
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden','false');
+    document.body.classList.add('modal-open');
+    // Wait a frame so layout is ready, then fit
+    requestAnimationFrame(fitToScreen);
+  }
+
+  function closeModal(){
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden','true');
+    document.body.classList.remove('modal-open');
+    stage.innerHTML = '';
+  }
+
+  function applyTransform(){
+    stage.style.transform = `translate(${offsetX}px, ${offsetY}px) scale(${stageScale})`;
+  }
+
+  // Zoom helpers
+  function setZoom(pct, center){
+    pct = Math.max(10, Math.min(parseInt(zoom.max,10)||800, pct));
+    const old = stageScale;
+    const next = pct/100;
+    if(center){
+      const rect = canvas.getBoundingClientRect();
+      const cx = center.x - rect.left; const cy = center.y - rect.top;
+      const dx = (cx - offsetX) / old; const dy = (cy - offsetY) / old;
+      offsetX = cx - dx * next; offsetY = cy - dy * next;
+    }
+    stageScale = next; zoom.value = Math.round(pct); zoomv.textContent = Math.round(pct)+'%';
+    applyTransform();
+  }
+
+  // Fit that uses natural size from viewBox/width/height (robust for viewBox-only SVGs)
+  function fitToScreen(){
+    const svg = stage.querySelector('svg');
+    if(!svg){ setZoom(100); return; }
+
+    // natural size
+    let w = 300, h = 150;
+    const vb = svg.getAttribute('viewBox');
+    const sw = parseFloat(svg.getAttribute('width'));
+    const sh = parseFloat(svg.getAttribute('height'));
+    if (vb){
+      const a = vb.trim().split(/\s+/).map(Number);
+      if (a.length===4 && isFinite(a[2]) && isFinite(a[3])){ w=a[2]; h=a[3]; }
+    } else {
+      if (isFinite(sw)) w = sw;
+      if (isFinite(sh)) h = sh;
+    }
+
+    // ensure CSS box
+    svg.style.width  = w + 'px';
+    svg.style.height = h + 'px';
+
+    const pad = 40;
+    const rect = canvas.getBoundingClientRect();
+    const s = Math.max(0.1, Math.min((rect.width - pad)/w, (rect.height - pad)/h));
+    const pct = Math.floor(s * 100);
+
+    zoom.max = String(Math.max(pct + 300, 2000)); // allow extra zoom for tiny SVGs
+    stageScale = s;
+    zoom.value = pct;
+    zoomv.textContent = pct + '%';
+
+    const scaledW = w * s, scaledH = h * s;
+    offsetX = Math.round((rect.width - scaledW)/2);
+    offsetY = Math.round((rect.height - scaledH)/2);
+    applyTransform();
+  }
+
+  // Pan with mouse drag
+  let dragging=false, px=0, py=0;
+  canvas.addEventListener('mousedown', e=>{ dragging=true; px=e.clientX; py=e.clientY; canvas.style.cursor='grabbing'; });
+  window.addEventListener('mousemove', e=>{ if(!dragging) return; const dx=e.clientX-px, dy=e.clientY-py; px=e.clientX; py=e.clientY; offsetX += dx; offsetY += dy; applyTransform(); });
+  window.addEventListener('mouseup', ()=>{ dragging=false; canvas.style.cursor='default'; });
+
+  // Wheel to zoom
+  canvas.addEventListener('wheel', e=>{ e.preventDefault(); const delta = e.deltaY<0 ? 1.1 : 0.9; setZoom(stageScale*100*delta, {x:e.clientX,y:e.clientY}); }, {passive:false});
+
+  // Controls
+  zoom.addEventListener('input', ()=> setZoom(parseInt(zoom.value)) );
+  zin.addEventListener('click', ()=> setZoom(stageScale*100+10));
+  zout.addEventListener('click', ()=> setZoom(stageScale*100-10));
+  fitBtn.addEventListener('click', fitToScreen);
+  oneBtn.addEventListener('click', ()=> setZoom(100));
+  closeBtn.addEventListener('click', closeModal);
+  window.addEventListener('keydown', e=>{
+    if(e.key==='Escape') closeModal();
+    if(e.key.toLowerCase()==='f'){ fitToScreen(); }
+    if(e.key==='1'){ setZoom(100); }
+    if(e.key==='+'){ setZoom(stageScale*100+10); }
+    if(e.key==='-'){ setZoom(stageScale*100-10); }
+  });
+
+  // Background modes
+  bg1.addEventListener('click', ()=>{
+    canvas.style.backgroundImage = '';
+    canvas.style.background = 'linear-gradient(45deg,#20242b 25%, transparent 25%),\
+    linear-gradient(-45deg,#20242b 25%, transparent 25%),\
+    linear-gradient(45deg, transparent 75%, #20242b 75%),\
+    linear-gradient(-45deg, transparent 75%, #20242b 75%)';
+    canvas.style.backgroundSize='24px 24px'; canvas.style.backgroundPosition='0 0,0 12px,12px -12px,-12px 0';
+  });
+  bg2.addEventListener('click', ()=>{ canvas.style.background = '#0b0d10'; canvas.style.backgroundImage='none'; });
+  bg3.addEventListener('click', ()=>{ canvas.style.background = '#f2f5f9'; canvas.style.backgroundImage='none'; });
+
+  // Copy SVG
+  copyBtn.addEventListener('click', async ()=>{
+    const svg = stage.innerHTML.trim();
+    try{ await navigator.clipboard.writeText(svg); copyBtn.textContent='✅ Copied'; setTimeout(()=>copyBtn.textContent='📋 Copy',1000);}catch(e){ alert('Clipboard failed.'); }
+  });
+
+  // Save original SVG
+  saveBtn.addEventListener('click', ()=>{
+    const it = filtered[currentIndex];
+    if(!it) return;
+    const a = document.createElement('a');
+    a.href = it.dataURL; a.download = it.name || 'icon.svg'; a.click();
+  });
+
+  // Export PNG at chosen size (longer side = value; preserves aspect ratio)
+  async function exportPNG(){
+    const it = filtered[currentIndex];
+    if(!it) return;
+    const svgText = stage.innerHTML.trim();
+    const size = Math.max(64, Math.min(4096, parseInt(pngSize.value)||1024));
+    const vbMatch = svgText.match(/viewBox\s*=\s*"([^"]+)"/i);
+    let w=64,h=64;
+    if(vbMatch){
+      const a = vbMatch[1].trim().split(/\s+/).map(Number);
+      w = a[2]; h = a[3];
+    } else {
+      const mw = svgText.match(/\bwidth\s*=\s*"(\d+(?:\.\d+)?)/i);
+      const mh = svgText.match(/\bheight\s*=\s*"(\d+(?:\.\d+)?)/i);
+      if(mw) w = parseFloat(mw[1]);
+      if(mh) h = parseFloat(mh[1]);
+    }
+    const scale = size / Math.max(w,h);
+    const outW = Math.round(w*scale);
+    const outH = Math.round(h*scale);
+    const svg = new Blob([svgText], {type:'image/svg+xml'});
+    const url = URL.createObjectURL(svg);
+    const img = new Image();
+    img.decoding = 'async';
+    img.onload = ()=>{
+      const canvasEl = document.createElement('canvas');
+      canvasEl.width = outW; canvasEl.height = outH;
+      const ctx = canvasEl.getContext('2d');
+      ctx.clearRect(0,0,outW,outH);
+      ctx.drawImage(img, 0, 0, outW, outH);
+      canvasEl.toBlob(b=>{
+        if(!b){ alert('toBlob failed'); return; }
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(b);
+        a.download = (it.name||'icon')+`_${outW}x${outH}.png`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+      }, 'image/png');
+      URL.revokeObjectURL(url);
+    };
+    img.onerror = ()=>{ alert('PNG export failed.'); URL.revokeObjectURL(url); };
+    img.src = url;
+  }
+  exportBtn.addEventListener('click', exportPNG);
+
+  // Input & drag n drop
+  input.addEventListener('change', async (e)=>{
+    await addFiles([...e.target.files]);
+    input.value = '';
+  });
+
+  async function addFiles(files){
+    const svgs = files.filter(f=> /\.svg$/i.test(f.name));
+    if(!svgs.length) return;
+    hint.textContent = 'Loading…';
+    const loaded = await Promise.all(svgs.map(fileToItem));
+    items = items.concat(loaded);
+    renderGrid();
+    hint.textContent = 'Drop .svg files anywhere';
+  }
+
+  ['dragenter','dragover'].forEach(ev=> drop.addEventListener(ev, (e)=>{ e.preventDefault(); drop.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev=> drop.addEventListener(ev, (e)=>{ e.preventDefault(); drop.classList.remove('drag'); }));
+  drop.addEventListener('drop', e=>{ const files=[...e.dataTransfer.files]; addFiles(files); });
+
+  // Global drag-drop
+  ['dragenter','dragover'].forEach(ev=> window.addEventListener(ev, e=>{ e.preventDefault(); }));
+  window.addEventListener('drop', e=>{ e.preventDefault(); const files=[...e.dataTransfer.files]; addFiles(files); });
+
+  // Search & size
+  q.addEventListener('input', renderGrid);
+  size.addEventListener('input', renderGrid);
+
+  // --- DEMO ASSETS -----------------------------------------------------------
+  // Paste your demo icons here in the form: {name:'File.svg', svg:`<svg ...>...</svg>`},
+  const DEMO = [
+  // --- Existing five ) ---
+  {name:'Coin_gold.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><ellipse cx='32' cy='52' rx='16' ry='6' fill='#000' opacity='.08'/><circle cx='32' cy='32' r='22' fill='#F4A300'/><circle cx='32' cy='32' r='20' fill='#FFD54A'/><circle cx='32' cy='32' r='14' fill='#FFEA61'/><path d='M32 20 L35.8 28.8 L45.4 29.1 L37.5 34.9 L40.2 44.2 L32 38.8 L23.8 44.2 L26.5 34.9 L18.6 29.1 L28.2 28.8 Z' fill='#F4A300'/><path d='M18 28 A14 14 0 0 1 46 28 Q32 22 18 28 Z' fill='#fff' opacity='.35'/><circle cx='25' cy='25' r='3' fill='#fff' opacity='.5'/><circle cx='32' cy='32' r='22' fill='none' stroke='#8C6D1F' stroke-width='2'/></svg>`},
+  {name:'Potion_red.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/><rect x='26' y='8' width='12' height='6' rx='2' fill='#A36A2C'/><rect x='27' y='14' width='10' height='7' rx='2' fill='#CFEFFF' stroke='#4AA3C8' stroke-width='2'/><path d='M20 24 C20 18 44 18 44 24 V36 C44 47 38 54 32 54 C26 54 20 47 20 36 Z' fill='#E6F7FF' stroke='#4AA3C8' stroke-width='2'/><path d='M22 38 C26 36 38 36 42 38 V42 C38 46 26 46 22 42 Z' fill='#FF4D6D'/><circle cx='28' cy='41' r='2' fill='#FFD1D9'/><circle cx='36' cy='43' r='1.6' fill='#FFD1D9'/><circle cx='34' cy='39' r='1.2' fill='#FFD1D9'/><path d='M23 28 C23 24 41 24 41 28 C38 26 26 26 23 28 Z' fill='#fff' opacity='.6'/></svg>`},
+  {name:'Gem_blue.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><ellipse cx='32' cy='56' rx='14' ry='4.5' fill='#000' opacity='.08'/><polygon points='32,10 52,28 32,54 12,28' fill='#29B6F6' stroke='#0D47A1' stroke-width='2'/><polygon points='32,10 42,28 32,40 22,28' fill='#4FC3F7'/><polygon points='12,28 22,28 32,40 32,54' fill='#039BE5'/><polygon points='52,28 42,28 32,40 32,54' fill='#0288D1'/><polygon points='22,28 32,28 32,40' fill='#81D4FA'/><polygon points='42,28 32,28 32,40' fill='#29B6F6'/><polyline points='32,10 42,28 52,28' fill='none' stroke='#B3E5FC' stroke-width='2' opacity='.7'/></svg>`},
+  {name:'Sword_steel.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><ellipse cx='40' cy='54' rx='14' ry='4.5' fill='#000' opacity='.08'/><path d='M42 10 L54 22 L36 40 L24 52 L20 48 L32 36 Z' fill='#E0E0E0' stroke='#616161' stroke-width='2'/><path d='M42 10 L46 14 L28 32 L24 28 Z' fill='#BDBDBD' opacity='.9'/><rect x='16' y='40' width='14' height='4' rx='2' fill='#D4AF37' stroke='#8D6E63' stroke-width='2'/><rect x='12' y='44' width='10' height='8' rx='2' fill='#8D6E63' stroke='#5D4037' stroke-width='2'/><circle cx='17' cy='52' r='3' fill='#D4AF37' stroke='#8D6E63' stroke-width='2'/><path d='M46 14 L34 26 L36 28 L48 16 Z' fill='#fff' opacity='.35'/></svg>`},
+  {name:'Chest.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/><rect x='10' y='26' width='44' height='24' rx='3' fill='#8B4513' stroke='#5E3212' stroke-width='2'/><rect x='12' y='28' width='40' height='6' fill='#A05A2C' opacity='.9'/><rect x='12' y='36' width='40' height='6' fill='#A05A2C' opacity='.9'/><rect x='12' y='44' width='40' height='4' fill='#A05A2C' opacity='.9'/><path d='M10 26 C10 16 54 16 54 26 V30 H10 Z' fill='#8B4513' stroke='#5E3212' stroke-width='2'/><rect x='18' y='16' width='4' height='34' fill='#C0C0C0' /><rect x='42' y='16' width='4' height='34' fill='#C0C0C0' /><rect x='10' y='26' width='44' height='4' fill='#C0C0C0' /><rect x='29' y='34' width='6' height='10' rx='1' fill='#FFD54A' stroke='#8C6D1F' stroke-width='2'/><circle cx='32' cy='40' r='1.8' fill='#8C6D1F'/><circle cx='20' cy='28' r='1.1' fill='#7A7A7A'/><circle cx='44' cy='28' r='1.1' fill='#7A7A7A'/><circle cx='20' cy='46' r='1.1' fill='#7A7A7A'/><circle cx='44' cy='46' r='1.1' fill='#7A7A7A'/><path d='M12 26 C12 20 52 20 52 26' fill='#fff' opacity='.15'/></svg>`},
+
+  // --- New arcade/game icons ---
+  {name:'Arcade_Cabinet.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='34' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M14 10 H44 L50 20 V52 H22 L14 34 Z' fill='#C62828' stroke='#8B1B1B' stroke-width='2'/>
+    <rect x='20' y='16' width='24' height='16' rx='2' fill='#1E88E5' stroke='#0D47A1' stroke-width='2'/>
+    <path d='M22 18 H42 L40 26 H24 Z' fill='#90CAF9' opacity='.5'/>
+    <rect x='18' y='34' width='30' height='8' rx='2' fill='#424242'/>
+    <circle cx='24' cy='38' r='2' fill='#E53935'/>
+    <circle cx='30' cy='38' r='2' fill='#FFEB3B'/>
+    <rect x='40' y='36' width='6' height='4' rx='1' fill='#66BB6A'/>
+    <rect x='22' y='46' width='22' height='4' rx='1' fill='#757575'/>
+    <path d='M14 10 L22 28 L22 52' fill='none' stroke='#8B1B1B' stroke-width='2'/>
+  </svg>`},
+
+  {name:'Gamepad.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='54' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M12 30 C12 22 22 20 32 20 C42 20 52 22 52 30 C52 42 46 48 40 48 C35 48 31 44 32 40 C31 44 27 48 24 48 C18 48 12 42 12 30 Z'
+          fill='#ECEFF1' stroke='#90A4AE' stroke-width='2'/>
+    <rect x='28' y='18' width='8' height='6' rx='3' fill='#B0BEC5'/>
+    <rect x='18' y='31' width='10' height='3' rx='1.5' fill='#455A64'/>
+    <rect x='22' y='27' width='3' height='10' rx='1.5' fill='#455A64'/>
+    <circle cx='42' cy='30' r='3' fill='#E53935'/>
+    <circle cx='48' cy='34' r='3' fill='#8E24AA'/>
+    <circle cx='44' cy='38' r='3' fill='#FB8C00'/>
+    <circle cx='40' cy='34' r='3' fill='#43A047'/>
+    <circle cx='24' cy='40' r='4' fill='#CFD8DC'/>
+    <circle cx='40' cy='40' r='4' fill='#CFD8DC'/>
+  </svg>`},
+
+  {name:'Joystick.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='14' y='42' width='36' height='8' rx='3' fill='#263238'/>
+    <rect x='12' y='36' width='40' height='8' rx='4' fill='#37474F'/>
+    <rect x='10' y='30' width='44' height='8' rx='4' fill='#455A64'/>
+    <rect x='24' y='20' width='4' height='14' rx='2' fill='#6D4C41'/>
+    <circle cx='26' cy='18' r='6' fill='#E53935' stroke='#B71C1C' stroke-width='2'/>
+    <circle cx='44' cy='34' r='3' fill='#29B6F6'/>
+    <circle cx='38' cy='34' r='3' fill='#FFEB3B'/>
+  </svg>`},
+
+  {name:'Bomb.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='55' rx='15' ry='5' fill='#000' opacity='.08'/>
+    <circle cx='30' cy='38' r='16' fill='#263238' stroke='#000' stroke-width='2'/>
+    <path d='M38 22 C46 20 50 24 52 30' fill='none' stroke='#6D4C41' stroke-width='3'/>
+    <path d='M54 28 L58 24 M54 24 L58 28' stroke='#FFAB00' stroke-width='2'/>
+    <circle cx='56' cy='26' r='3' fill='#FF6D00'/>
+    <circle cx='56' cy='26' r='1.5' fill='#FFCA28'/>
+    <path d='M22 46 A12 12 0 0 0 40 30' fill='none' stroke='#455A64' stroke-width='2' opacity='.65'/>
+  </svg>`},
+
+  {name:'Key_gold.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='54' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <circle cx='22' cy='30' r='10' fill='#FFD54A' stroke='#8C6D1F' stroke-width='2'/>
+    <circle cx='22' cy='30' r='5' fill='#FFECB3'/>
+    <rect x='30' y='28' width='22' height='6' rx='2' fill='#F4A300' stroke='#8C6D1F' stroke-width='2'/>
+    <rect x='46' y='26' width='3' height='4' fill='#8C6D1F'/>
+    <rect x='39' y='26' width='3' height='4' fill='#8C6D1F'/>
+    <path d='M16 26 A10 10 0 0 1 28 26' fill='none' stroke='#FFF59D' stroke-width='2' opacity='.8'/>
+  </svg>`},
+
+  {name:'Shield_blue_steel.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M32 8 L52 18 V34 C52 46 42 54 32 58 C22 54 12 46 12 34 V18 Z' fill='#1E88E5' stroke='#0D47A1' stroke-width='2'/>
+    <path d='M32 14 L46 22 V34 C46 42 39 48 32 51 C25 48 18 42 18 34 V22 Z' fill='#2196F3'/>
+    <path d='M32 14 L46 22 L32 30 L18 22 Z' fill='#64B5F6' opacity='.8'/>
+    <circle cx='32' cy='34' r='6' fill='#BBDEFB' stroke='#0D47A1' stroke-width='2'/>
+  </svg>`},
+
+  {name:'Skull.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <path d='M20 20 C20 12 44 12 44 20 C52 22 54 34 46 38 V46 H18 V38 C10 34 12 22 20 20 Z' fill='#ECEFF1' stroke='#B0BEC5' stroke-width='2'/>
+    <circle cx='26' cy='30' r='5' fill='#263238'/>
+    <circle cx='38' cy='30' r='5' fill='#263238'/>
+    <rect x='28' y='40' width='8' height='4' rx='1' fill='#90A4AE'/>
+    <rect x='24' y='46' width='4' height='6' rx='1' fill='#CFD8DC'/>
+    <rect x='36' y='46' width='4' height='6' rx='1' fill='#CFD8DC'/>
+  </svg>`},
+
+  {name:'Scroll_magic.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='55' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='14' y='18' width='36' height='28' rx='3' fill='#FFE0B2' stroke='#A1887F' stroke-width='2'/>
+    <rect x='10' y='16' width='8' height='32' rx='2' fill='#D7CCC8' stroke='#8D6E63' stroke-width='2'/>
+    <rect x='46' y='16' width='8' height='32' rx='2' fill='#D7CCC8' stroke='#8D6E63' stroke-width='2'/>
+    <path d='M18 26 H46' stroke='#8D6E63' stroke-width='2' opacity='.6'/>
+    <path d='M18 32 H46' stroke='#8D6E63' stroke-width='2' opacity='.6'/>
+    <path d='M18 38 H38' stroke='#8D6E63' stroke-width='2' opacity='.6'/>
+    <circle cx='40' cy='38' r='2' fill='#FFCA28'/>
+    <path d='M38 20 L40 24 L44 26 L40 28 L38 32 L36 28 L32 26 L36 24 Z' fill='#8E24AA' opacity='.8'/>
+  </svg>`},
+
+  {name:'Bow_and_Arrow.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='30' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <path d='M18 12 C14 26 14 38 18 52' fill='none' stroke='#8D6E63' stroke-width='4'/>
+    <line x1='18' y1='12' x2='48' y2='32' stroke='#CFD8DC' stroke-width='2'/>
+    <line x1='48' y1='32' x2='18' y2='52' stroke='#CFD8DC' stroke-width='2'/>
+    <polygon points='48,32 56,32 52,36' fill='#B0BEC5'/>
+    <rect x='50' y='29' width='8' height='6' rx='2' fill='#90A4AE'/>
+    <path d='M19 18 C24 32 24 32 19 46' fill='none' stroke='#5D4037' stroke-width='3'/>
+  </svg>`},
+
+  {name:'Battle_Axe.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='34' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <rect x='30' y='12' width='4' height='40' rx='2' fill='#8D6E63' stroke='#5D4037' stroke-width='2'/>
+    <path d='M32 20 C40 20 46 26 46 32 C46 38 40 44 32 44 Z' fill='#CFD8DC' stroke='#90A4AE' stroke-width='2'/>
+    <path d='M32 20 C24 20 18 26 18 32 C18 38 24 44 32 44 Z' fill='#ECEFF1' stroke='#B0BEC5' stroke-width='2'/>
+    <circle cx='32' cy='32' r='3' fill='#6D4C41'/>
+  </svg>`},
+
+  {name:'Magic_Staff.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='28' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <rect x='26' y='14' width='4' height='38' rx='2' fill='#795548' stroke='#5D4037' stroke-width='2'/>
+    <circle cx='28' cy='14' r='6' fill='#7C4DFF' stroke='#311B92' stroke-width='2'/>
+    <circle cx='28' cy='14' r='3' fill='#B39DDB'/>
+    <path d='M22 20 L28 12 L34 20' fill='none' stroke='#B39DDB' stroke-width='2' opacity='.7'/>
+  </svg>`},
+
+  {name:'Spellbook.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='14' y='14' width='36' height='36' rx='4' fill='#5C6BC0' stroke='#3F51B5' stroke-width='2'/>
+    <rect x='18' y='18' width='28' height='28' rx='3' fill='#9FA8DA'/>
+    <path d='M22 26 H34 M22 34 H38' stroke='#283593' stroke-width='2' opacity='.8'/>
+    <path d='M40 18 V46' stroke='#3F51B5' stroke-width='3'/>
+    <path d='M44 20 L48 22 L44 24 Z' fill='#FFCA28'/>
+    <circle cx='32' cy='28' r='3' fill='#FFEB3B'/>
+  </svg>`},
+
+  {name:'Crown_gold.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='54' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <path d='M12 40 L20 22 L32 36 L44 22 L52 40 Z' fill='#FBC02D' stroke='#8C6D1F' stroke-width='2'/>
+    <rect x='12' y='40' width='40' height='8' rx='2' fill='#FDD835' stroke='#8C6D1F' stroke-width='2'/>
+    <circle cx='20' cy='22' r='3' fill='#E53935'/>
+    <circle cx='44' cy='22' r='3' fill='#8E24AA'/>
+    <circle cx='32' cy='36' r='3' fill='#29B6F6'/>
+  </svg>`},
+
+  {name:'Trophy.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='22' y='16' width='20' height='16' rx='2' fill='#F9A825' stroke='#8C6D1F' stroke-width='2'/>
+    <path d='M22 20 H14 C14 30 20 34 22 30 Z' fill='#FFD54A' stroke='#8C6D1F' stroke-width='2'/>
+    <path d='M42 20 H50 C50 30 44 34 42 30 Z' fill='#FFD54A' stroke='#8C6D1F' stroke-width='2'/>
+    <rect x='30' y='32' width='4' height='8' fill='#FBC02D'/>
+    <rect x='24' y='42' width='16' height='6' rx='2' fill='#6D4C41' stroke='#4E342E' stroke-width='2'/>
+    <rect x='20' y='48' width='24' height='4' rx='1' fill='#8D6E63'/>
+    <path d='M26 24 L32 18 L38 24 L32 28 Z' fill='#FFE082'/>
+  </svg>`},
+
+  {name:'Rocket.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M28 14 C40 14 46 26 46 36 C40 36 28 28 28 14 Z' fill='#ECEFF1' stroke='#90A4AE' stroke-width='2'/>
+    <circle cx='36' cy='26' r='5' fill='#90CAF9' stroke='#1976D2' stroke-width='2'/>
+    <path d='M22 40 L28 34 L36 42 L30 48 Z' fill='#E53935'/>
+    <path d='M18 44 L24 38 L26 40 L20 46 Z' fill='#B71C1C'/>
+    <path d='M28 48 C26 54 22 56 18 58 C22 56 24 52 26 48 Z' fill='#FFB300' />
+  </svg>`},
+
+  {name:'Flame.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <path d='M28 10 C40 18 42 28 36 34 C44 34 50 42 44 50 C40 56 24 56 20 46 C16 38 24 28 28 10 Z'
+          fill='#FF7043' stroke='#BF360C' stroke-width='2'/>
+    <path d='M28 28 C34 32 34 38 30 42 C28 44 22 44 22 38 C22 34 26 30 28 28 Z' fill='#FFCC80'/>
+  </svg>`},
+
+  {name:'Ring_gold.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='54' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <circle cx='32' cy='34' r='14' fill='#FBC02D' stroke='#8C6D1F' stroke-width='2'/>
+    <circle cx='32' cy='34' r='9' fill='#FFF8E1'/>
+    <path d='M26 20 L32 14 L38 20 L34 24 H30 Z' fill='#B3E5FC' stroke='#0288D1' stroke-width='2'/>
+    <path d='M20 30 A12 12 0 0 1 44 30' fill='none' stroke='#FFF59D' stroke-width='2' opacity='.8'/>
+  </svg>`},
+
+  {name:'Star_Power.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <path d='M32 10 L38 26 H56 L42 36 L48 52 L32 42 L16 52 L22 36 L8 26 H26 Z'
+          fill='#FFEB3B' stroke='#FBC02D' stroke-width='2'/>
+    <circle cx='27' cy='32' r='2' fill='#263238'/><circle cx='37' cy='32' r='2' fill='#263238'/>
+    <path d='M20 26 L28 26' stroke='#FFF59D' stroke-width='2' opacity='.8'/>
+  </svg>`},
+
+  {name:'Portal.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <ellipse cx='32' cy='34' rx='16' ry='24' fill='#311B92' stroke='#4527A0' stroke-width='2'/>
+    <ellipse cx='32' cy='34' rx='12' ry='18' fill='#5E35B1'/>
+    <ellipse cx='32' cy='34' rx='8' ry='12' fill='#7E57C2'/>
+    <path d='M24 24 C30 22 34 22 40 24' fill='none' stroke='#B39DDB' stroke-width='2' opacity='.8'/>
+    <path d='M24 44 C30 46 34 46 40 44' fill='none' stroke='#B39DDB' stroke-width='2' opacity='.8'/>
+  </svg>`},
+
+  {name:'Hourglass.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <rect x='18' y='12' width='28' height='6' rx='2' fill='#546E7A'/>
+    <rect x='18' y='46' width='28' height='6' rx='2' fill='#546E7A'/>
+    <path d='M20 18 C28 26 36 26 44 18 V46 C36 38 28 38 20 46 Z' fill='#ECEFF1' stroke='#B0BEC5' stroke-width='2'/>
+    <path d='M24 28 C28 30 36 30 40 28' stroke='#FFC107' stroke-width='3'/>
+    <path d='M24 38 C28 36 36 36 40 38' stroke='#FFC107' stroke-width='3'/>
+    <circle cx='32' cy='33' r='3' fill='#FFC107'/>
+  </svg>`},
+
+  {name:'Magnet.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <path d='M22 16 H30 V30 H22 C22 40 30 48 40 48 C50 48 58 40 58 30 H50 C50 34 46 38 40 38 C34 38 30 34 30 30 V16 Z'
+          fill='#E53935' stroke='#B71C1C' stroke-width='2'/>
+    <rect x='22' y='16' width='8' height='6' fill='#B0BEC5'/>
+    <rect x='50' y='24' width='8' height='6' fill='#90CAF9'/>
+  </svg>`},
+
+  {name:'Dice.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx="16" ry="5" fill="#000" opacity=".08"/>
+    <rect x="16" y="16" width="32" height="32" rx="6" fill="#FFFFFF" stroke="#BDBDBD" stroke-width="2"/>
+    <circle cx="24" cy="24" r="3" fill="#263238"/>
+    <circle cx="32" cy="32" r="3" fill="#263238"/>
+    <circle cx="40" cy="40" r="3" fill="#263238"/>
+    <circle cx="40" cy="24" r="3" fill="#263238"/>
+    <circle cx="24" cy="40" r="3" fill="#263238"/>
+  </svg>`},
+
+  {name:'Meat_Drumstick.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='38' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <path d='M24 22 C16 30 18 40 28 46 C38 52 48 48 52 40 C56 32 50 22 40 20 C34 18 28 18 24 22 Z' fill='#8D6E63' stroke='#5D4037' stroke-width='2'/>
+    <circle cx='18' cy='48' r='4' fill='#FFF9C4' stroke='#D7CCC8' stroke-width='2'/>
+    <circle cx='16' cy='50' r='3' fill='#FFFDE7'/>
+    <circle cx='22' cy='44' r='2' fill='#A1887F' opacity='.6'/>
+  </svg>`},
+
+  {name:'Mushroom_Powerup.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M16 28 C16 18 48 18 48 28 C48 38 40 40 32 40 C24 40 16 38 16 28 Z' fill='#E53935' stroke='#B71C1C' stroke-width='2'/>
+    <circle cx='24' cy='28' r='4' fill='#FFCDD2'/>
+    <circle cx='32' cy='24' r='4' fill='#FFCDD2'/>
+    <circle cx='40' cy='28' r='4' fill='#FFCDD2'/>
+    <rect x='24' y='40' width='16' height='10' rx='3' fill='#FFE0B2' stroke='#A1887F' stroke-width='2'/>
+    <circle cx='28' cy='45' r='2' fill='#8D6E63'/><circle cx='36' cy='45' r='2' fill='#8D6E63'/>
+  </svg>`},
+
+  {name:'Helmet_Knight.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M16 42 C16 24 24 16 32 16 C40 16 48 24 48 42 V48 H16 Z' fill='#B0BEC5' stroke='#757575' stroke-width='2'/>
+    <rect x='20' y='36' width='24' height='6' rx='2' fill='#263238'/>
+    <rect x='28' y='22' width='8' height='8' rx='2' fill='#ECEFF1'/>
+    <path d='M16 42 H48' stroke='#90A4AE' stroke-width='2'/>
+  </svg>`},
+
+  {name:'Controller_Retro.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='55' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='12' y='26' width='40' height='16' rx='6' fill='#D7CCC8' stroke='#8D6E63' stroke-width='2'/>
+    <rect x='18' y='32' width='10' height='4' rx='1.5' fill='#455A64'/>
+    <rect x='22' y='28' width='4' height='12' rx='1.5' fill='#455A64'/>
+    <circle cx='40' cy='34' r='3' fill='#E53935'/><circle cx='46' cy='34' r='3' fill='#1E88E5'/>
+    <path d='M24 26 C24 22 40 22 40 26' fill='none' stroke='#A1887F' stroke-width='2'/>
+  </svg>`},
+
+  {name:'Potion_blue.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='26' y='8' width='12' height='6' rx='2' fill='#8D6E63'/>
+    <rect x='27' y='14' width='10' height='7' rx='2' fill='#E0F7FA' stroke='#26C6DA' stroke-width='2'/>
+    <path d='M20 24 C20 18 44 18 44 24 V36 C44 47 38 54 32 54 C26 54 20 47 20 36 Z' fill='#E0F7FA' stroke='#26C6DA' stroke-width='2'/>
+    <path d='M22 38 C26 36 38 36 42 38 V42 C38 46 26 46 22 42 Z' fill='#26C6DA'/>
+    <circle cx='30' cy='41' r='2' fill='#B2EBF2'/><circle cx='36' cy='41' r='1.5' fill='#B2EBF2'/>
+  </svg>`},
+
+  {name:'Key_Silver.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='54' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <circle cx='22' cy='30' r='10' fill='#CFD8DC' stroke='#90A4AE' stroke-width='2'/>
+    <circle cx='22' cy='30' r='5' fill='#ECEFF1'/>
+    <rect x='30' y='28' width='22' height='6' rx='2' fill='#B0BEC5' stroke='#78909C' stroke-width='2'/>
+    <rect x='46' y='26' width='3' height='4' fill='#78909C'/><rect x='39' y='26' width='3' height='4' fill='#78909C'/>
+  </svg>`},
+
+  {name:'Bomb_Mega.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='55' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <circle cx='30' cy='36' r='18' fill='#212121' stroke='#000' stroke-width='2'/>
+    <path d='M36 20 C46 18 50 22 54 28' fill='none' stroke='#795548' stroke-width='3'/>
+    <path d='M56 26 L60 22 M56 22 L60 26' stroke='#FFD54F' stroke-width='2'/>
+    <circle cx='58' cy='24' r='4' fill='#FF6F00'/><circle cx='58' cy='24' r='2' fill='#FFE082'/>
+    <path d='M22 44 A14 14 0 0 0 42 26' fill='none' stroke='#424242' stroke-width='2' opacity='.65'/>
+    <circle cx='24' cy='30' r='2' fill='#546E7A'/><circle cx='34' cy='44' r='2' fill='#546E7A'/>
+  </svg>`},
+
+  {name:'Arcade_Token_Bronze.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='52' rx='16' ry='6' fill='#000' opacity='.08'/>
+    <circle cx='32' cy='32' r='22' fill='#B87333' stroke='#6D4C41' stroke-width='2'/>
+    <circle cx='32' cy='32' r='16' fill='#DFA46B'/>
+    <path d='M22 28 H42 M22 36 H42' stroke='#8D6E63' stroke-width='2' opacity='.6'/>
+    <path d='M20 24 A12 12 0 0 1 44 24' fill='none' stroke='#FFF3E0' stroke-width='2' opacity='.6'/>
+  </svg>`},
+
+  {name:'Crystal_Purple.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <polygon points='32,8 46,24 42,52 22,52 18,24' fill='#8E24AA' stroke='#4A148C' stroke-width='2'/>
+    <polygon points='32,8 24,24 28,52 22,52 18,24' fill='#AB47BC'/>
+    <polygon points='32,8 40,24 36,52 42,52 46,24' fill='#7B1FA2'/>
+    <path d='M24 24 L40 24' stroke='#CE93D8' stroke-width='2' opacity='.7'/>
+  </svg>`},
+
+  {name:'Treasure_Map.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='55' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='12' y='16' width='40' height='32' rx='3' fill='#FFF3E0' stroke='#A1887F' stroke-width='2'/>
+    <path d='M16 22 C24 20 38 24 48 20' fill='none' stroke='#8D6E63' stroke-width='2' opacity='.5'/>
+    <path d='M16 38 C24 34 38 38 48 34' fill='none' stroke='#8D6E63' stroke-width='2' opacity='.5'/>
+    <circle cx='22' cy='28' r='2' fill='#E53935'/><path d='M42 34 l4 4 m0 -4 l-4 4' stroke='#E53935' stroke-width='2'/>
+    <path d='M20 26 Q32 32 44 28' fill='none' stroke='#1976D2' stroke-width='2' opacity='.7'/>
+  </svg>`},
+
+  {name:'Flag_Checkpoint.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='28' cy='56' rx='12' ry='5' fill='#000' opacity='.08'/>
+    <rect x='18' y='12' width='4' height='40' fill='#6D4C41'/>
+    <path d='M22 14 L48 20 L22 26 Z' fill='#E53935' stroke='#B71C1C' stroke-width='2'/>
+    <path d='M22 26 L48 32 L22 38 Z' fill='#FFC107' stroke='#8C6D1F' stroke-width='2'/>
+  </svg>`},
+  {name:'Arcade_Ticket.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='54' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M12 22 h40 a2 2 0 0 1 2 2 v4 a6 6 0 0 0 0 12 v4 a2 2 0 0 1-2 2 H12 a2 2 0 0 1-2-2 v-4 a6 6 0 0 0 0-12 v-4 a2 2 0 0 1 2-2 Z' fill='#FFCA28' stroke='#8C6D1F' stroke-width='2'/>
+    <path d='M20 26 L24 34 L20 42 L28 38 L36 42 L32 34 L36 26 L28 30 Z' fill='#F57F17'/>
+    <path d='M14 24 H50' stroke='#FFF59D' stroke-width='2' opacity='.5'/>
+  </svg>`},
+
+  {name:'Pixel_Heart.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <g fill='#E53935' stroke='#B71C1C' stroke-width='2'>
+      <rect x='18' y='24' width='8' height='8' rx='1'/><rect x='26' y='24' width='8' height='8' rx='1'/>
+      <rect x='34' y='24' width='8' height='8' rx='1'/><rect x='14' y='32' width='8' height='8' rx='1'/>
+      <rect x='22' y='32' width='8' height='8' rx='1'/><rect x='30' y='32' width='8' height='8' rx='1'/>
+      <rect x='38' y='32' width='8' height='8' rx='1'/><rect x='18' y='40' width='8' height='8' rx='1'/>
+      <rect x='26' y='40' width='8' height='8' rx='1'/><rect x='34' y='40' width='8' height='8' rx='1'/>
+      <rect x='26' y='48' width='8' height='8' rx='1'/>
+    </g>
+    <rect x='20' y='26' width='4' height='4' fill='#FFCDD2'/>
+  </svg>`},
+
+  {name:'Medkit.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='55' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='12' y='22' width='40' height='28' rx='4' fill='#FFFFFF' stroke='#B0BEC5' stroke-width='2'/>
+    <rect x='24' y='16' width='16' height='8' rx='3' fill='#ECEFF1' stroke='#90A4AE' stroke-width='2'/>
+    <rect x='30' y='12' width='4' height='4' rx='1' fill='#CFD8DC'/>
+    <rect x='28' y='30' width='8' height='16' fill='#E53935'/><rect x='24' y='34' width='16' height='8' fill='#E53935'/>
+    <path d='M14 26 H50' stroke='#ECEFF1' stroke-width='2'/>
+  </svg>`},
+
+  {name:'Energy_Bolt.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='36' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <path d='M34 8 L18 34 H30 L24 56 L54 28 H40 L46 8 Z' fill='#FFEE58' stroke='#F9A825' stroke-width='2'/>
+    <path d='M28 20 L38 18 L34 26 L26 28 Z' fill='#FFF59D' opacity='.7'/>
+  </svg>`},
+
+  {name:'Magic_Wand.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='28' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <rect x='12' y='44' width='28' height='6' rx='3' transform='rotate(-45 26 47)' fill='#795548' stroke='#5D4037' stroke-width='2'/>
+    <rect x='24' y='32' width='10' height='4' transform='rotate(-45 29 34)' fill='#D7CCC8'/>
+    <path d='M46 16 L48 22 L54 24 L48 26 L46 32 L44 26 L38 24 L44 22 Z' fill='#FFCA28' stroke='#F57F17' stroke-width='2'/>
+    <circle cx='46' cy='24' r='2' fill='#FFF59D'/>
+  </svg>`},
+
+  {name:'Shield_Red_Enamel.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M32 8 L52 18 V34 C52 46 42 54 32 58 C22 54 12 46 12 34 V18 Z' fill='#E53935' stroke='#B71C1C' stroke-width='2'/>
+    <path d='M32 14 L46 22 V34 C46 42 39 48 32 51 C25 48 18 42 18 34 V22 Z' fill='#EF9A9A'/>
+    <circle cx='32' cy='34' r='6' fill='#FFCDD2' stroke='#B71C1C' stroke-width='2'/>
+  </svg>`},
+
+  {name:'Chest_Open.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M10 26 H54 V50 H10 Z' fill='#8B4513' stroke='#5E3212' stroke-width='2'/>
+    <path d='M10 26 C10 16 54 16 54 26 H10 Z' fill='#A0522D' stroke='#5E3212' stroke-width='2'/>
+    <rect x='12' y='28' width='40' height='6' fill='#A05A2C'/>
+    <circle cx='18' cy='44' r='3' fill='#FFD54A'/><circle cx='24' cy='40' r='2.5' fill='#FFEE58'/>
+    <circle cx='30' cy='44' r='2.6' fill='#F9A825'/><circle cx='36' cy='42' r='2.8' fill='#FFE082'/>
+    <rect x='28' y='34' width='6' height='10' rx='1' fill='#FFD54A' stroke='#8C6D1F' stroke-width='2'/>
+  </svg>`},
+
+  {name:'Pickaxe.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='28' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <rect x='30' y='18' width='4' height='34' rx='2' transform='rotate(-45 32 35)' fill='#8D6E63' stroke='#5D4037' stroke-width='2'/>
+    <path d='M18 28 C28 20 40 20 50 28 L46 32 C38 26 30 26 22 32 Z' fill='#CFD8DC' stroke='#90A4AE' stroke-width='2'/>
+  </svg>`},
+
+  {name:'Hammer_War.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='30' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <rect x='30' y='16' width='4' height='36' rx='2' fill='#8D6E63' stroke='#5D4037' stroke-width='2'/>
+    <rect x='22' y='20' width='20' height='12' rx='2' fill='#CFD8DC' stroke='#90A4AE' stroke-width='2'/>
+    <rect x='24' y='22' width='6' height='8' fill='#ECEFF1'/><rect x='34' y='22' width='6' height='8' fill='#ECEFF1'/>
+  </svg>`},
+
+  {name:'Anvil.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='36' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M12 30 H52 C48 34 44 36 38 36 H30 C28 40 24 42 20 42 H16 Z' fill='#455A64' stroke='#263238' stroke-width='2'/>
+    <rect x='26' y='42' width='20' height='8' fill='#37474F'/>
+    <rect x='30' y='50' width='12' height='4' fill='#263238'/>
+  </svg>`},
+
+  {name:'Viking_Helmet.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M16 42 C16 26 48 26 48 42 V48 H16 Z' fill='#B0BEC5' stroke='#757575' stroke-width='2'/>
+    <path d='M16 34 C12 30 12 24 16 20 C22 24 22 28 20 34 Z' fill='#ECEFF1' stroke='#90A4AE' stroke-width='2'/>
+    <path d='M48 34 C52 30 52 24 48 20 C42 24 42 28 44 34 Z' fill='#ECEFF1' stroke='#90A4AE' stroke-width='2'/>
+    <circle cx='32' cy='40' r='3' fill='#607D8B'/>
+  </svg>`},
+
+  {name:'Boots_Leather.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='36' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M16 40 H30 V28 H24 V22 H18 V40 Z' fill='#8D6E63' stroke='#5D4037' stroke-width='2'/>
+    <rect x='16' y='40' width='18' height='6' rx='2' fill='#6D4C41'/>
+    <path d='M34 40 H48 V24 H40 V20 H34 V40 Z' fill='#8D6E63' stroke='#5D4037' stroke-width='2'/>
+    <rect x='34' y='40' width='18' height='6' rx='2' fill='#6D4C41'/>
+  </svg>`},
+
+  {name:'Gauntlet_Iron.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='28' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <path d='M16 44 H36 V36 C36 30 30 26 24 28 L20 30 V24 H16 Z' fill='#B0BEC5' stroke='#78909C' stroke-width='2'/>
+    <rect x='16' y='44' width='20' height='6' rx='2' fill='#90A4AE'/>
+    <circle cx='20' cy='34' r='2' fill='#CFD8DC'/><circle cx='24' cy='32' r='2' fill='#CFD8DC'/>
+    <circle cx='28' cy='32' r='2' fill='#CFD8DC'/>
+  </svg>`},
+
+  {name:'Ring_Emerald.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='54' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <circle cx='32' cy='34' r='14' fill='#FDD835' stroke='#8C6D1F' stroke-width='2'/>
+    <circle cx='32' cy='34' r='9' fill='#FFF8E1'/>
+    <polygon points='32,18 38,26 36,36 28,36 26,26' fill='#26A69A' stroke='#00796B' stroke-width='2'/>
+    <path d='M22 30 A12 12 0 0 1 42 30' fill='none' stroke='#FFF59D' stroke-width='2' opacity='.7'/>
+  </svg>`},
+
+  {name:'Potion_Poison_Green.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='26' y='8' width='12' height='6' rx='2' fill='#795548'/>
+    <rect x='27' y='14' width='10' height='7' rx='2' fill='#E8F5E9' stroke='#43A047' stroke-width='2'/>
+    <path d='M20 24 C20 18 44 18 44 24 V36 C44 47 38 54 32 54 C26 54 20 47 20 36 Z' fill='#E8F5E9' stroke='#43A047' stroke-width='2'/>
+    <path d='M22 38 C26 36 38 36 42 38 V42 C38 46 26 46 22 42 Z' fill='#66BB6A'/>
+    <circle cx='30' cy='41' r='2' fill='#C8E6C9'/><circle cx='36' cy='41' r='1.5' fill='#C8E6C9'/>
+  </svg>`},
+
+  {name:'Potion_Mana_Purple.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='26' y='8' width='12' height='6' rx='2' fill='#6D4C41'/>
+    <rect x='27' y='14' width='10' height='7' rx='2' fill='#F3E5F5' stroke='#7E57C2' stroke-width='2'/>
+    <path d='M20 24 C20 18 44 18 44 24 V36 C44 47 38 54 32 54 C26 54 20 47 20 36 Z' fill='#F3E5F5' stroke='#7E57C2' stroke-width='2'/>
+    <path d='M22 38 C26 36 38 36 42 38 V42 C38 46 26 46 22 42 Z' fill='#9575CD'/>
+    <circle cx='30' cy='41' r='2' fill='#E1BEE7'/><circle cx='36' cy='41' r='1.5' fill='#E1BEE7'/>
+  </svg>`},
+
+  {name:'Crystal_Red.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <polygon points='32,8 46,24 42,52 22,52 18,24' fill='#E53935' stroke='#B71C1C' stroke-width='2'/>
+    <polygon points='32,8 24,24 28,52 22,52 18,24' fill='#EF9A9A'/>
+    <polygon points='32,8 40,24 36,52 42,52 46,24' fill='#D32F2F'/>
+    <path d='M24 24 L40 24' stroke='#FFCDD2' stroke-width='2' opacity='.7'/>
+  </svg>`},
+
+  {name:'Coin_Silver.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='52' rx='16' ry='6' fill='#000' opacity='.08'/>
+    <circle cx='32' cy='32' r='22' fill='#CFD8DC' stroke='#90A4AE' stroke-width='2'/>
+    <circle cx='32' cy='32' r='16' fill='#ECEFF1'/>
+    <path d='M22 28 H42 M22 36 H42' stroke='#B0BEC5' stroke-width='2' opacity='.6'/>
+    <path d='M20 24 A12 12 0 0 1 44 24' fill='none' stroke='#FFFFFF' stroke-width='2' opacity='.6'/>
+  </svg>`},
+
+  {name:'Portal_Orange.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <ellipse cx='32' cy='34' rx='16' ry='24' fill='#E65100' stroke='#BF360C' stroke-width='2'/>
+    <ellipse cx='32' cy='34' rx='12' ry='18' fill='#F57C00'/><ellipse cx='32' cy='34' rx='8' ry='12' fill='#FF9800'/>
+    <path d='M24 24 C30 22 34 22 40 24' fill='none' stroke='#FFE0B2' stroke-width='2' opacity='.8'/>
+    <path d='M24 44 C30 46 34 46 40 44' fill='none' stroke='#FFE0B2' stroke-width='2' opacity='.8'/>
+  </svg>`},
+
+  {name:'Blaster_Laser.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='34' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='16' y='30' width='32' height='10' rx='3' fill='#90CAF9' stroke='#1976D2' stroke-width='2'/>
+    <rect x='12' y='28' width='8' height='14' rx='2' fill='#1E88E5'/>
+    <rect x='48' y='32' width='8' height='6' rx='2' fill='#E53935'/>
+    <rect x='22' y='26' width='10' height='6' rx='2' fill='#B3E5FC'/>
+    <circle cx='26' cy='36' r='2' fill='#0D47A1'/>
+  </svg>`},
+
+  {name:'Force_Field_Bubble.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='58' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <circle cx='32' cy='34' r='20' fill='#E1F5FE' stroke='#81D4FA' stroke-width='2' opacity='.9'/>
+    <circle cx='26' cy='28' r='3' fill='#fff' opacity='.6'/><circle cx='38' cy='40' r='2' fill='#fff' opacity='.5'/>
+    <path d='M16 34 A16 16 0 0 1 48 34' fill='none' stroke='#B3E5FC' stroke-width='2' opacity='.7'/>
+  </svg>`},
+
+  {name:'Medallion_Sun.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <circle cx='32' cy='34' r='16' fill='#FBC02D' stroke='#8C6D1F' stroke-width='2'/>
+    <circle cx='32' cy='34' r='8' fill='#FFE082'/>
+    <path d='M32 14 V22 M32 46 V54 M14 34 H22 M42 34 H50 M20 20 L24 24 M40 44 L44 48 M20 48 L24 44 M40 24 L44 20'
+          stroke='#FFD54F' stroke-width='2'/>
+  </svg>`},
+
+  {name:'Dynamite_Bundle.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='34' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='18' y='26' width='10' height='22' rx='2' fill='#D32F2F' stroke='#B71C1C' stroke-width='2'/>
+    <rect x='30' y='24' width='10' height='24' rx='2' fill='#E53935' stroke='#B71C1C' stroke-width='2'/>
+    <rect x='42' y='26' width='10' height='22' rx='2' fill='#C62828' stroke='#B71C1C' stroke-width='2'/>
+    <path d='M25 24 C30 20 36 20 47 22' fill='none' stroke='#6D4C41' stroke-width='2'/>
+    <path d='M48 22 L52 20 M48 20 L52 22' stroke='#FFB300' stroke-width='2'/><circle cx='50' cy='21' r='2' fill='#FFC107'/>
+  </svg>`},
+
+  {name:'Quiver_Arrows.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='28' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <path d='M20 20 L34 14 L40 28 L26 34 Z' fill='#8D6E63' stroke='#5D4037' stroke-width='2'/>
+    <rect x='22' y='24' width='10' height='20' rx='3' fill='#A1887F'/>
+    <path d='M34 14 L38 20 L42 16 Z' fill='#CFD8DC' stroke='#90A4AE' stroke-width='1.5'/>
+    <path d='M30 16 L34 22 L38 18 Z' fill='#CFD8DC' stroke='#90A4AE' stroke-width='1.5'/>
+  </svg>`},
+
+  {name:'Crossbow.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='36' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='30' y='18' width='4' height='28' rx='2' fill='#6D4C41' stroke='#4E342E' stroke-width='2'/>
+    <path d='M16 30 C24 22 40 22 48 30' fill='none' stroke='#8D6E63' stroke-width='4'/>
+    <line x1='16' y1='30' x2='48' y2='30' stroke='#B0BEC5' stroke-width='2'/>
+    <polygon points='32,18 36,24 28,24' fill='#B0BEC5'/>
+  </svg>`},
+
+  {name:'Spear.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='30' cy='56' rx='14' ry='5' fill='#000' opacity='.08'/>
+    <rect x='18' y='14' width='4' height='36' rx='2' transform='rotate(-15 20 32)' fill='#8D6E63' stroke='#5D4037' stroke-width='2'/>
+    <polygon points='20,10 26,18 14,18' fill='#CFD8DC' stroke='#90A4AE' stroke-width='2'/>
+  </svg>`},
+
+  {name:'Trident.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='34' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='30' y='14' width='4' height='36' rx='2' fill='#80DEEA' stroke='#006064' stroke-width='2'/>
+    <path d='M22 22 L30 20 L30 28 Z' fill='#4DD0E1' stroke='#006064' stroke-width='2'/>
+    <path d='M42 22 L34 20 L34 28 Z' fill='#4DD0E1' stroke='#006064' stroke-width='2'/>
+    <path d='M30 14 L32 10 L34 14 Z' fill='#26C6DA' stroke='#006064' stroke-width='2'/>
+  </svg>`},
+
+  {name:'Shield_Bubble_Blue.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='58' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M32 10 C44 16 52 20 52 28 C52 44 42 52 32 56 C22 52 12 44 12 28 C12 20 20 16 32 10 Z'
+          fill='#E3F2FD' stroke='#64B5F6' stroke-width='2' opacity='.95'/>
+    <circle cx='28' cy='26' r='3' fill='#fff' opacity='.6'/>
+  </svg>`},
+
+  {name:'Magic_Rune_Stone.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M22 16 L44 20 L50 42 L36 52 H24 L16 34 Z' fill='#B0BEC5' stroke='#78909C' stroke-width='2'/>
+    <path d='M30 24 L38 24 L34 34 L40 34 L28 48' fill='none' stroke='#7E57C2' stroke-width='3'/>
+  </svg>`},
+
+  {name:'Scroll_Blue_Ribbon.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='32' cy='55' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <rect x='16' y='20' width='32' height='24' rx='3' fill='#FFF8E1' stroke='#A1887F' stroke-width='2'/>
+    <rect x='12' y='18' width='8' height='28' rx='2' fill='#D7CCC8' stroke='#8D6E63' stroke-width='2'/>
+    <rect x='44' y='18' width='8' height='28' rx='2' fill='#D7CCC8' stroke='#8D6E63' stroke-width='2'/>
+    <path d='M20 26 H44 M20 32 H40 M20 38 H36' stroke='#8D6E63' stroke-width='2' opacity='.6'/>
+    <path d='M24 44 L28 52 L32 44 Z' fill='#1E88E5'/><circle cx='28' cy='44' r='3' fill='#90CAF9' stroke='#1565C0' stroke-width='2'/>
+  </svg>`},
+
+  {name:'Boots_Swift_Greaves.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='36' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M18 38 H32 V28 H24 V22 H18 V38 Z' fill='#90CAF9' stroke='#1976D2' stroke-width='2'/>
+    <rect x='18' y='38' width='18' height='6' rx='2' fill='#1565C0'/>
+    <path d='M34 38 H48 V26 H40 V22 H34 V38 Z' fill='#90CAF9' stroke='#1976D2' stroke-width='2'/>
+    <rect x='34' y='38' width='18' height='6' rx='2' fill='#1565C0'/>
+  </svg>`},
+
+  {name:'Winged_Boots.svg', svg:`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'>
+    <ellipse cx='36' cy='56' rx='16' ry='5' fill='#000' opacity='.08'/>
+    <path d='M20 40 H34 V28 H28 V22 H22 V40 Z' fill='#8D6E63' stroke='#5D4037' stroke-width='2'/>
+    <rect x='20' y='40' width='16' height='6' rx='2' fill='#6D4C41'/>
+    <path d='M36 26 C40 22 44 22 48 26 C46 28 44 30 40 30 Z' fill='#ECEFF1' stroke='#B0BEC5' stroke-width='2'/>
+    <path d='M38 24 C42 20 46 20 50 24' fill='none' stroke='#CFD8DC' stroke-width='2'/>
+  </svg>`},
+  {name:'Adventurer_Avatar.svg', svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="512" height="512" role="img" aria-label="Adventurer avatar">
+  <defs>
+    <!-- rings / materials -->
+    <radialGradient id="bgGrad" cx="50%" cy="40%" r="70%">
+      <stop offset="0%" stop-color="#0e2a4a"/>
+      <stop offset="60%" stop-color="#123a56"/>
+      <stop offset="100%" stop-color="#0a2234"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#f6d365"/><stop offset="45%" stop-color="#f1c14b"/><stop offset="100%" stop-color="#bd8f2d"/>
+    </linearGradient>
+    <linearGradient id="cloak" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3aa068"/><stop offset="60%" stop-color="#2a7b53"/><stop offset="100%" stop-color="#1e5d3f"/>
+    </linearGradient>
+    <linearGradient id="leather" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#8d6e63"/><stop offset="50%" stop-color="#6d4c41"/><stop offset="100%" stop-color="#4e342e"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e0e0e0"/><stop offset="60%" stop-color="#bdbdbd"/><stop offset="100%" stop-color="#8e8e8e"/>
+    </linearGradient>
+    <linearGradient id="skin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#f1c7a9"/><stop offset="60%" stop-color="#e7b491"/><stop offset="100%" stop-color="#d79b76"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#5e3c24"/><stop offset="100%" stop-color="#3d2616"/>
+    </linearGradient>
+    <radialGradient id="gem" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#9be7ff"/><stop offset="70%" stop-color="#58c4ff"/><stop offset="100%" stop-color="#2aa9ff"/>
+    </radialGradient>
+    <filter id="softShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity=".35"/>
+    </filter>
+    <linearGradient id="sheen" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%" stop-color="#fff" stop-opacity=".18"/>
+      <stop offset="35%" stop-color="#fff" stop-opacity=".06"/>
+      <stop offset="100%" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- medallion bg -->
+  <circle cx="64" cy="64" r="62" fill="url(#bgGrad)"/>
+  <circle cx="64" cy="64" r="58" fill="none" stroke="url(#gold)" stroke-width="6"/>
+  <!-- softer ring reflections -->
+  <path d="M20,40 A52,52 0 0 1 108,58" fill="none" stroke="#fff" stroke-opacity=".14" stroke-width="6" stroke-linecap="round"/>
+  <path d="M28,94 A46,46 0 0 0 100,80" fill="none" stroke="#000" stroke-opacity=".12" stroke-width="8" stroke-linecap="round"/>
+
+  <g filter="url(#softShadow)">
+    <!-- sword BEHIND hood -->
+    <g transform="translate(86,44) rotate(35)">
+      <rect x="-26" y="-4" width="32" height="8" rx="2" fill="url(#steel)" stroke="#616161" stroke-width="1.5"/>
+      <rect x="6" y="-6" width="4" height="12" rx="2" fill="#d4af37" stroke="#8c6d1f" stroke-width="1"/>
+      <rect x="-30" y="-3" width="8" height="6" rx="2" fill="#6d4c41" stroke="#4e342e" stroke-width="1"/>
+    </g>
+
+    <!-- hood & cape -->
+    <path d="M28,88 C28,56 44,34 64,34 C84,34 100,56 100,88
+             C90,98 78,104 64,104 C50,104 38,98 28,88Z" fill="url(#cloak)"/>
+    <!-- sheen -->
+    <path d="M36,86 C44,82 52,80 64,80 L64,100 C52,100 44,98 36,94Z" fill="url(#sheen)"/>
+
+    <!-- hair -->
+    <path d="M44,56 C44,48 52,44 64,44 C76,44 84,48 84,56
+             C84,63 80,70 74,72 L54,72 C48,70 44,63 44,56Z" fill="url(#hair)"/>
+
+    <!-- face -->
+    <path d="M48,58 C48,50 56,46 64,46 C72,46 80,50 80,58
+             C80,66 75,74 64,74 C53,74 48,66 48,58Z" fill="url(#skin)"/>
+    <path d="M46,58 C44,60 44,64 46,66 C48,64 48,60 46,58Z" fill="url(#skin)"/>
+    <path d="M82,58 C84,60 84,64 82,66 C80,64 80,60 82,58Z" fill="url(#skin)"/>
+
+    <!-- eyes / brows -->
+    <g>
+      <ellipse cx="57" cy="60" rx="4.6" ry="3.2" fill="#fff"/>
+      <ellipse cx="71" cy="60" rx="4.6" ry="3.2" fill="#fff"/>
+      <circle cx="57" cy="60" r="1.6" fill="#2c3e50"/>
+      <circle cx="71" cy="60" r="1.6" fill="#2c3e50"/>
+      <circle cx="56.2" cy="59.4" r=".55" fill="#fff" opacity=".85"/>
+      <circle cx="70.2" cy="59.4" r=".55" fill="#fff" opacity=".85"/>
+      <path d="M51,56 C55,54 59,54 62,56" stroke="#4b2b16" stroke-width="2" stroke-linecap="round" fill="none"/>
+      <path d="M66,56 C69,54 73,54 77,56" stroke="#4b2b16" stroke-width="2" stroke-linecap="round" fill="none"/>
+    </g>
+
+    <!-- nose & mouth -->
+    <path d="M64,58 C64,60 63,62 62,63" stroke="#c98863" stroke-width="1.4" stroke-linecap="round" fill="none" opacity=".85"/>
+    <path d="M58,68 C61,70 67,70 70,68" stroke="#a45f45" stroke-width="2" stroke-linecap="round" fill="none" opacity=".95"/>
+
+    <!-- CHEST ONLY straps (no face overlap) -->
+    <path d="M36,78 L58,102" stroke="#5d4037" stroke-width="7" stroke-linecap="round" opacity=".9"/>
+    <path d="M92,78 L70,102" stroke="#5d4037" stroke-width="7" stroke-linecap="round" opacity=".9"/>
+
+    <!-- cuirass -->
+    <path d="M48,76 L80,76 L84,94
+             C78,96 71,98 64,98
+             C57,98 50,96 44,94Z" fill="url(#leather)"/>
+    <rect x="59" y="88" width="10" height="8" rx="1.5" fill="url(#gold)" stroke="#8c6d1f" stroke-width="1.4"/>
+
+    <!-- pendant (smaller chevron so it doesn’t read as a big V) -->
+    <g transform="translate(64,80)">
+      <circle r="5.4" fill="url(#gold)" stroke="#8c6d1f" stroke-width="1.4"/>
+      <circle r="3.6" fill="url(#gem)"/>
+      <path d="M-1.6,-0.2 L0,1.2 L1.6,-0.2" stroke="#fff" stroke-width="1" stroke-linecap="round" fill="none" opacity=".75"/>
+      <circle r="7.6" fill="url(#gem)" opacity=".18"/>
+    </g>
+
+    <!-- tiny earring -->
+    <circle cx="83" cy="63" r="1.6" fill="url(#gold)" stroke="#8c6d1f" stroke-width=".8"/>
+    <!-- cloak hem fold -->
+    <path d="M48,100 C52,96 58,94 64,94 C70,94 76,96 80,100" stroke="#173f2b" stroke-width="3" stroke-linecap="round" opacity=".33"/>
+  </g>
+</svg>`},
+{
+    name: 'Shmup_Aquila_MkII.svg', // sleek hi-tech interceptor (blue/white)
+    svg: `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="hullBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#e6f2ff"/>
+      <stop offset="55%" stop-color="#9ec5f8"/>
+      <stop offset="100%" stop-color="#6aa1f0"/>
+    </linearGradient>
+    <linearGradient id="steel" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#e0e0e0"/><stop offset="60%" stop-color="#bdbdbd"/><stop offset="100%" stop-color="#8e8e8e"/>
+    </linearGradient>
+    <radialGradient id="canopy" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#7be1ff"/>
+      <stop offset="70%" stop-color="#2fb6f4"/>
+      <stop offset="100%" stop-color="#1976d2"/>
+    </radialGradient>
+    <radialGradient id="flameBlue" cx="50%" cy="0%" r="80%">
+      <stop offset="0%" stop-color="#b3f5ff"/><stop offset="40%" stop-color="#5fd4ff"/><stop offset="100%" stop-color="#0079ff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffd56a"/><stop offset="60%" stop-color="#f1c14b"/><stop offset="100%" stop-color="#b8871f"/>
+    </linearGradient>
+  </defs>
+
+  <!-- engine flame -->
+  <ellipse cx="32" cy="60.5" rx="9" ry="4.6" fill="url(#flameBlue)" filter="url(#glowB)"/>
+
+  <!-- body -->
+  <g filter="url(#glowB)">
+    <!-- central fuselage -->
+    <path d="M32 4 L39 14 V34 L43 42 V52 L32 60 L21 52 V42 L25 34 V14 Z" fill="url(#hullBlue)" stroke="#1c4e9a" stroke-width="1.2"/>
+    <!-- nose spear -->
+    <path d="M30 4 L32 2 L34 4 L34 10 H30 Z" fill="url(#steel)" stroke="#6e6e6e" stroke-width=".8"/>
+    <!-- canopy -->
+    <ellipse cx="32" cy="18" rx="7.2" ry="5.6" fill="url(#canopy)" stroke="#0d47a1" stroke-width="1.2"/>
+    <path d="M26 18 Q32 14 38 18" fill="none" stroke="#b3e5fc" stroke-width="1" opacity=".8"/>
+
+    <!-- intakes -->
+    <rect x="25" y="22" width="4" height="8" rx="1" fill="#1e88e5"/><rect x="35" y="22" width="4" height="8" rx="1" fill="#1e88e5"/>
+    <rect x="24" y="30" width="6" height="3" rx="1" fill="#0d47a1" opacity=".6"/><rect x="34" y="30" width="6" height="3" rx="1" fill="#0d47a1" opacity=".6"/>
+
+    <!-- wings -->
+    <path d="M25 22 L12 28 L12 38 L25 34 Z" fill="#6aa1f0" stroke="#1c4e9a" stroke-width="1.2"/>
+    <path d="M39 22 L52 28 L52 38 L39 34 Z" fill="#6aa1f0" stroke="#1c4e9a" stroke-width="1.2"/>
+    <!-- wing tips -->
+    <rect x="10" y="32" width="4" height="6" rx="1" fill="url(#gold)" /><rect x="50" y="32" width="4" height="6" rx="1" fill="url(#gold)"/>
+
+    <!-- tail fins -->
+    <path d="M21 48 L16 50 L21 54 Z" fill="#3b6fd8"/><path d="M43 48 L48 50 L43 54 Z" fill="#3b6fd8"/>
+
+    <!-- engine bell -->
+    <ellipse cx="32" cy="54.5" rx="7.5" ry="4" fill="#113a74" stroke="#0d2f5d" stroke-width="1"/>
+    <ellipse cx="32" cy="55" rx="4.5" ry="2.2" fill="#2fb6f4"/>
+  </g>
+
+  <!-- panel lines / lights -->
+  <g opacity=".55" stroke="#0d47a1" stroke-width=".8">
+    <path d="M28 36 H36"/><path d="M29 41 H35"/><path d="M31 46 H33"/>
+  </g>
+  <circle cx="32" cy="28" r="0.9" fill="#b3e5fc"/><circle cx="32" cy="32" r="0.9" fill="#b3e5fc"/>
+</svg>`
+  },
+
+  {
+    name: 'Shmup_Crimson_Titan.svg', // heavy red gunship / bomber
+    svg: `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="redHull" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#ff6b6b"/>
+      <stop offset="55%" stop-color="#e53935"/>
+      <stop offset="100%" stop-color="#b71c1c"/>
+    </linearGradient>
+    <linearGradient id="darkMetal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#9ea3a6"/><stop offset="60%" stop-color="#6e7276"/><stop offset="100%" stop-color="#3b3f44"/>
+    </linearGradient>
+    <radialGradient id="flameOrange" cx="50%" cy="0%" r="80%">
+      <stop offset="0%" stop-color="#fff1b3"/><stop offset="40%" stop-color="#ffb84d"/><stop offset="100%" stop-color="#ff6d00" stop-opacity="0"/>
+    </radialGradient>
+    
+  </defs>
+
+  <!-- dual afterburners -->
+  <ellipse cx="26" cy="61" rx="7.5" ry="3.6" fill="url(#flameOrange)" filter="url(#glowO)"/>
+  <ellipse cx="38" cy="61" rx="7.5" ry="3.6" fill="url(#flameOrange)" filter="url(#glowO)"/>
+
+  <!-- armored body -->
+  <g filter="url(#glowO)">
+    <path d="M32 6 L40 16 L44 26 L52 30 L52 40 L44 44 L40 54 L32 58 L24 54 L20 44 L12 40 L12 30 L20 26 L24 16 Z"
+          fill="url(#redHull)" stroke="#7f1212" stroke-width="1.4"/>
+
+    <!-- cockpit slit -->
+    <rect x="27" y="16.5" width="10" height="4.5" rx="2" fill="#212121" stroke="#000" stroke-width=".8"/>
+    <rect x="28" y="17.3" width="8" height="2.9" rx="1.5" fill="#8dd1ff"/>
+
+    <!-- missile pods -->
+    <g fill="url(#darkMetal)" stroke="#2a2e33" stroke-width="1">
+      <rect x="8.5" y="30" width="7" height="7" rx="1.2"/>
+      <rect x="48.5" y="30" width="7" height="7" rx="1.2"/>
+    </g>
+    <circle cx="12" cy="33.5" r="1.6" fill="#ffd54a"/><circle cx="52" cy="33.5" r="1.6" fill="#ffd54a"/>
+
+    <!-- exhaust bells -->
+    <ellipse cx="26" cy="56" rx="6.5" ry="3" fill="#222" stroke="#111" stroke-width="1"/>
+    <ellipse cx="38" cy="56" rx="6.5" ry="3" fill="#222" stroke="#111" stroke-width="1"/>
+    <ellipse cx="26" cy="56" rx="3.4" ry="1.6" fill="#ffb84d"/><ellipse cx="38" cy="56" rx="3.4" ry="1.6" fill="#ffb84d"/>
+
+    <!-- rivets / panels -->
+    <g fill="#f2a19e" opacity=".9">
+      <circle cx="32" cy="22" r=".9"/><circle cx="28" cy="26" r=".9"/><circle cx="36" cy="26" r=".9"/>
+      <circle cx="32" cy="34" r=".9"/><circle cx="24" cy="34" r=".9"/><circle cx="40" cy="34" r=".9"/>
+      <circle cx="32" cy="44" r=".9"/>
+    </g>
+    <g opacity=".5" stroke="#5a0d0d" stroke-width="1">
+      <path d="M24 26 H40"/><path d="M22 34 H42"/><path d="M24 44 H40"/>
+    </g>
+  </g>
+</svg>`
+  },
+
+  {
+    name: 'Shmup_VoidNaut_Bio.svg', // alien / bio-organic craft (teal/purple bioluminescence)
+    svg: `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <linearGradient id="chitin" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#3de2b5"/>
+      <stop offset="60%" stop-color="#1fb28d"/>
+      <stop offset="100%" stop-color="#0a7a60"/>
+    </linearGradient>
+    <radialGradient id="veinGlow" cx="50%" cy="40%" r="65%">
+      <stop offset="0%" stop-color="#c9a4ff"/>
+      <stop offset="60%" stop-color="#8c6cff"/>
+      <stop offset="100%" stop-color="#5a3ee6"/>
+    </radialGradient>
+    <radialGradient id="bioFlame" cx="50%" cy="0%" r="85%">
+      <stop offset="0%" stop-color="#c3ffd9"/><stop offset="40%" stop-color="#6affad"/><stop offset="100%" stop-color="#00e27f" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- bio-thruster -->
+  <ellipse cx="32" cy="60.5" rx="10" ry="4.6" fill="url(#bioFlame)" filter="url(#softGlow)"/>
+
+  <!-- living hull -->
+  <g filter="url(#softGlow)">
+    <!-- dorsal shell -->
+    <path d="M32 6 C42 12 48 20 48 28 C48 40 40 48 32 54 C24 48 16 40 16 28 C16 20 22 12 32 6Z"
+          fill="url(#chitin)" stroke="#084e3f" stroke-width="1.2"/>
+    <!-- ventral fins -->
+    <path d="M22 30 C14 30 12 36 12 40 C16 38 20 36 24 36" fill="#20a184" opacity=".75"/>
+    <path d="M42 30 C50 30 52 36 52 40 C48 38 44 36 40 36" fill="#20a184" opacity=".75"/>
+
+    <!-- biolum veins -->
+    <path d="M32 10 C38 16 40 22 40 28 C40 36 36 42 32 48 C28 42 24 36 24 28 C24 22 26 16 32 10Z"
+          fill="url(#veinGlow)" opacity=".75"/>
+    <path d="M28 22 C30 24 30 28 28 32" stroke="#e0d2ff" stroke-width="1.2" opacity=".8" fill="none"/>
+    <path d="M36 22 C34 24 34 28 36 32" stroke="#e0d2ff" stroke-width="1.2" opacity=".8" fill="none"/>
+
+    <!-- eye/cockpit -->
+    <ellipse cx="32" cy="22" rx="6.5" ry="5" fill="#fff" opacity=".95" stroke="#6f55ff" stroke-width="1.2"/>
+    <circle cx="32" cy="22" r="2.3" fill="#5a3ee6"/><circle cx="31.3" cy="21.3" r="0.7" fill="#fff"/>
+
+    <!-- ventral spines -->
+    <path d="M26 44 L22 50 L26 54" stroke="#0c5a4a" stroke-width="2" stroke-linecap="round" fill="none"/>
+    <path d="M38 44 L42 50 L38 54" stroke="#0c5a4a" stroke-width="2" stroke-linecap="round" fill="none"/>
+
+    <!-- exhaust gland -->
+    <ellipse cx="32" cy="55" rx="7.8" ry="3.6" fill="#0f614e" stroke="#094b3e" stroke-width="1"/>
+    <ellipse cx="32" cy="55" rx="4.2" ry="1.8" fill="#6affad"/>
+  </g>
+</svg>`
+  },
+  { name: 'Castle_Flag.svg', svg: `
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="512" height="512" role="img" aria-label="Stone castle with flag">
+  <defs>
+    <!-- Atmosphere & terrain -->
+    <radialGradient id="sky" cx="50%" cy="20%" r="80%">
+      <stop offset="0%"  stop-color="#cfe7ff"/>
+      <stop offset="60%" stop-color="#6fa1f5"/>
+      <stop offset="100%" stop-color="#284980"/>
+    </radialGradient>
+    <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#63b86b"/>
+      <stop offset="100%" stop-color="#3d7e43"/>
+    </linearGradient>
+
+    <!-- Materials -->
+    <linearGradient id="stone" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#e8eef6"/>
+      <stop offset="60%" stop-color="#c7d0de"/>
+      <stop offset="100%" stop-color="#aab3c4"/>
+    </linearGradient>
+    <linearGradient id="stoneDark" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#cfd7e4"/>
+      <stop offset="100%" stop-color="#98a4b8"/>
+    </linearGradient>
+    <linearGradient id="wood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#a8733d"/>
+      <stop offset="50%" stop-color="#855328"/>
+      <stop offset="100%" stop-color="#603816"/>
+    </linearGradient>
+    <linearGradient id="roof" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#ff6a6a"/>
+      <stop offset="60%" stop-color="#c53b3b"/>
+      <stop offset="100%" stop-color="#8e2323"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#ffe28a"/>
+      <stop offset="60%" stop-color="#f1c14b"/>
+      <stop offset="100%" stop-color="#b8871f"/>
+    </linearGradient>
+    <linearGradient id="bannerBlue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%"  stop-color="#6ad0ff"/>
+      <stop offset="100%" stop-color="#1b76d2"/>
+    </linearGradient>
+
+    <!-- Brick pattern (subtle) -->
+    <pattern id="brick" width="8" height="6" patternUnits="userSpaceOnUse">
+      <rect width="8" height="6" fill="none" stroke="#b8c2d3" stroke-width=".6" opacity=".35"/>
+      <path d="M4 0 V6" stroke="#b8c2d3" stroke-width=".6" opacity=".25"/>
+    </pattern>
+
+    <!-- Shadows & glow -->
+    <filter id="drop" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#000" flood-opacity=".35"/>
+    </filter>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="1.2"/>
+    </filter>
+
+    <!-- Flag cloth gradient -->
+    <linearGradient id="flagRed" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"  stop-color="#ff4d5e"/>
+      <stop offset="100%" stop-color="#b40028"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect x="0" y="0" width="128" height="96" fill="url(#sky)"/>
+  <ellipse cx="96" cy="24" rx="10" ry="4" fill="#fff" opacity=".35"/>
+  <ellipse cx="34" cy="18" rx="16" ry="6" fill="#fff" opacity=".28"/>
+  <rect x="0" y="92" width="128" height="36" fill="url(#grass)"/>
+  <ellipse cx="64" cy="94" rx="36" ry="6" fill="#16345e" opacity=".35" filter="url(#soft)"/>
+
+  <!-- Castle group -->
+  <g filter="url(#drop)">
+    <!-- Left tower -->
+    <g transform="translate(22,36)">
+      <!-- shaft -->
+      <rect x="0" y="8" width="24" height="52" rx="2" fill="url(#stone)" stroke="#7d8798" stroke-width="1"/>
+      <!-- crenellations -->
+      <g fill="url(#stoneDark)" stroke="#7d8798" stroke-width="1">
+        <rect x="-2" y="4" width="6" height="6" rx="1"/>
+        <rect x="5"  y="4" width="6" height="6" rx="1"/>
+        <rect x="12" y="4" width="6" height="6" rx="1"/>
+        <rect x="19" y="4" width="6" height="6" rx="1"/>
+      </g>
+      <!-- roof cone -->
+      <path d="M12,-8 L26,4 H-2 Z" fill="url(#roof)" stroke="#6e1f1f" stroke-width="1"/>
+      <!-- arrow slits -->
+      <g fill="#263238">
+        <rect x="10" y="20" width="4" height="10" rx="1"/>
+        <rect x="10" y="40" width="4" height="10" rx="1"/>
+      </g>
+      <!-- banner -->
+      <path d="M22,0 v18 l8-4 l-8-4" fill="url(#bannerBlue)" stroke="#0d47a1" stroke-width="1"/>
+      <!-- brick overlay -->
+      <rect x="0" y="8" width="24" height="52" fill="url(#brick)" opacity=".65"/>
+    </g>
+
+    <!-- Right tower -->
+    <g transform="translate(82,36)">
+      <rect x="0" y="8" width="24" height="52" rx="2" fill="url(#stone)" stroke="#7d8798" stroke-width="1"/>
+      <g fill="url(#stoneDark)" stroke="#7d8798" stroke-width="1">
+        <rect x="-2" y="4" width="6" height="6" rx="1"/>
+        <rect x="5"  y="4" width="6" height="6" rx="1"/>
+        <rect x="12" y="4" width="6" height="6" rx="1"/>
+        <rect x="19" y="4" width="6" height="6" rx="1"/>
+      </g>
+      <path d="M12,-8 L26,4 H-2 Z" fill="url(#roof)" stroke="#6e1f1f" stroke-width="1"/>
+      <g fill="#263238">
+        <rect x="10" y="20" width="4" height="10" rx="1"/>
+        <rect x="10" y="40" width="4" height="10" rx="1"/>
+      </g>
+      <path d="M2,0 v18 l-8-4 l8-4" fill="url(#bannerBlue)" stroke="#0d47a1" stroke-width="1"/>
+      <rect x="0" y="8" width="24" height="52" fill="url(#brick)" opacity=".65"/>
+    </g>
+
+    <!-- Curtain wall -->
+    <g>
+      <rect x="34" y="56" width="60" height="40" rx="2" fill="url(#stone)" stroke="#7d8798" stroke-width="1"/>
+      <!-- merlons -->
+      <g fill="url(#stoneDark)" stroke="#7d8798" stroke-width="1">
+        <rect x="34" y="50" width="6" height="8" rx="1"/>
+        <rect x="42" y="50" width="6" height="8" rx="1"/>
+        <rect x="50" y="50" width="6" height="8" rx="1"/>
+        <rect x="58" y="50" width="6" height="8" rx="1"/>
+        <rect x="66" y="50" width="6" height="8" rx="1"/>
+        <rect x="74" y="50" width="6" height="8" rx="1"/>
+        <rect x="82" y="50" width="6" height="8" rx="1"/>
+        <rect x="90" y="50" width="6" height="8" rx="1"/>
+      </g>
+      <!-- wall brick overlay -->
+      <rect x="34" y="56" width="60" height="40" fill="url(#brick)" opacity=".6"/>
+    </g>
+
+    <!-- Central keep rising above wall -->
+    <g>
+      <rect x="50" y="30" width="28" height="28" rx="2" fill="url(#stoneDark)" stroke="#7d8798" stroke-width="1"/>
+      <!-- keep crenellations -->
+      <g fill="url(#stone)" stroke="#7d8798" stroke-width="1">
+        <rect x="50" y="24" width="6" height="8" rx="1"/>
+        <rect x="58" y="24" width="6" height="8" rx="1"/>
+        <rect x="66" y="24" width="6" height="8" rx="1"/>
+        <rect x="74" y="24" width="4" height="8" rx="1"/>
+      </g>
+      <!-- mast & flag -->
+      <rect x="64.5" y="10" width="3" height="14" fill="#7b8794"/>
+      <path d="M67.5,12
+               c8,2 12,-2 18,2
+               c-6,4 -10,0 -18,2 z"
+            fill="url(#flagRed)" stroke="#8a0622" stroke-width="1"/>
+      <circle cx="66" cy="10" r="2" fill="url(#gold)" stroke="#8c6d1f" stroke-width=".8"/>
+      <!-- windows -->
+      <rect x="58" y="38" width="4" height="8" rx="1" fill="#263238"/>
+      <rect x="66" y="38" width="4" height="8" rx="1" fill="#263238"/>
+    </g>
+
+    <!-- Gatehouse & drawbridge door -->
+    <g>
+      <!-- arch opening -->
+      <path d="M64 76
+               c10 0 18 8 18 18
+               v2 H46 v-2
+               c0-10 8-18 18-18 z"
+            fill="#1b2a3f" opacity=".35"/>
+      <!-- wooden door -->
+      <path d="M64 76
+               c8 0 14 6 14 14
+               v6 H50 v-6
+               c0-8 6-14 14-14 z"
+            fill="url(#wood)" stroke="#3c2414" stroke-width="1.2"/>
+      <!-- iron bands -->
+      <rect x="50" y="90" width="28" height="3" fill="#3c2414" opacity=".6"/>
+      <rect x="50" y="96" width="28" height="3" fill="#3c2414" opacity=".6"/>
+      <!-- studs -->
+      <g fill="#d6b25a">
+        <circle cx="54" cy="92" r="1.1"/><circle cx="60" cy="92" r="1.1"/><circle cx="68" cy="92" r="1.1"/><circle cx="74" cy="92" r="1.1"/>
+        <circle cx="54" cy="98" r="1.1"/><circle cx="60" cy="98" r="1.1"/><circle cx="68" cy="98" r="1.1"/><circle cx="74" cy="98" r="1.1"/>
+      </g>
+      <!-- portcullis (raised) -->
+      <g stroke="#626c7c" stroke-width="1.2">
+        <line x1="54" y1="76" x2="54" y2="86"/>
+        <line x1="60" y1="76" x2="60" y2="86"/>
+        <line x1="68" y1="76" x2="68" y2="86"/>
+        <line x1="74" y1="76" x2="74" y2="86"/>
+        <line x1="50" y1="84" x2="78" y2="84"/>
+      </g>
+      <!-- gold crest on door -->
+      <rect x="60.5" y="88" width="7" height="7" rx="1.5" fill="url(#gold)" stroke="#8c6d1f" stroke-width=".9"/>
+    </g>
+  </g>
+
+  <!-- Foreground grass highlights -->
+  <path d="M0,98 C28,92 100,100 128,94 V128 H0 Z" fill="#2e6a35" opacity=".35"/>
+</svg>` },
+  {name:'Castle_OSS_20B.svg', svg:`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <!-- Gradients -->
+  <defs>
+    <!-- Tower body – light‑to‑dark gray -->
+    <linearGradient id="towerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#e6e6e6"/>
+      <stop offset="100%" stop-color="#7e8a91"/>
+    </linearGradient>
+
+    <!-- Gatehouse body – light‑to‑dark gray -->
+    <linearGradient id="gateGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#bfbfbf"/>
+      <stop offset="100%" stop-color="#6c6c6c"/>
+    </linearGradient>
+
+    <!-- Flagpole – dark‑to‑light brown -->
+    <linearGradient id="flagpoleGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5d3a1a"/>
+      <stop offset="100%" stop-color="#a67c52"/>
+    </linearGradient>
+
+    <!-- Conical tower tops – bright red to deep red -->
+    <radialGradient id="coneGrad" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ff0000"/>
+      <stop offset="100%" stop-color="#8b0000"/>
+    </radialGradient>
+
+    <!-- Drawbridge – dark brown to darker brown -->
+    <linearGradient id="drawbridgeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#8B4513"/>
+      <stop offset="100%" stop-color="#654321"/>
+    </linearGradient>
+  </defs>
+  <!-- Sky gradient (top → bottom)                      -->
+  <defs>
+    <linearGradient id="skyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <!-- Light sky blue at the top -->
+      <stop offset="0%" stop-color="#87CEFA"/>
+      <!-- Deeper blue toward the horizon -->
+      <stop offset="100%" stop-color="#4682B4"/>
+    </linearGradient>
+  </defs>
+
+  <!-- The rectangle that paints the whole background -->
+  <rect width="128" height="128" fill="url(#skyGrad)"/>
+
+  <!-- Two fluffy clouds (ellipses with opacity)         -->
+  <!-- Cloud #1 – positioned a bit left‑upper -->
+  <ellipse cx="40" cy="30" rx="20" ry="12"
+           fill="#ffffff" opacity="0.8"/>
+  <!-- Cloud #2 – slightly lower and right -->
+  <ellipse cx="90" cy="45" rx="22" ry="14"
+           fill="#ffffff" opacity="0.8"/>
+
+
+  <!-- Green ground line -->
+  <rect x="0" y="110" width="128" height="18" fill="#4CAF50"/>
+
+  <!-- Drawbridge (in front of the castle) -->
+  <rect x="20" y="106" width="88" height="10" fill="url(#drawbridgeGrad)"/>
+
+  <!-- Left tower -->
+  <g id="left-tower">
+    <rect x="20" y="60" width="28" height="50" fill="url(#towerGrad)"/>
+    <polygon points="20,60 48,60 34,40" fill="url(#coneGrad)"/>
+
+    <!-- Crenellations -->
+    <g id="left-crenellation">
+      <rect x="22" y="55" width="4" height="5" fill="#555"/>
+      <rect x="30" y="55" width="4" height="5" fill="#555"/>
+      <rect x="38" y="55" width="4" height="5" fill="#555"/>
+      <rect x="46" y="55" width="4" height="5" fill="#555"/>
+    </g>
+
+    <!-- Flagpole -->
+    <rect x="34" y="43" width="2" height="15" fill="url(#flagpoleGrad)"/>
+
+    <!-- Flag -->
+    <polygon points="36,43 48,38 48,48" fill="#ff0000"/>
+
+    <!-- Windows -->
+    <rect x="25" y="75" width="6" height="4" fill="#ffffff"/>
+    <rect x="25" y="90" width="6" height="4" fill="#ffffff"/>
+  </g>
+
+  <!-- Right tower -->
+  <g id="right-tower">
+    <rect x="80" y="60" width="28" height="50" fill="url(#towerGrad)"/>
+    <polygon points="80,60 108,60 94,40" fill="url(#coneGrad)"/>
+
+    <!-- Crenellations -->
+    <g id="right-crenellation">
+      <rect x="82" y="55" width="4" height="5" fill="#555"/>
+      <rect x="90" y="55" width="4" height="5" fill="#555"/>
+      <rect x="98" y="55" width="4" height="5" fill="#555"/>
+      <rect x="106" y="55" width="4" height="5" fill="#555"/>
+    </g>
+
+    <!-- Flagpole -->
+    <rect x="94" y="43" width="2" height="15" fill="url(#flagpoleGrad)"/>
+
+    <!-- Flag -->
+    <polygon points="96,43 84,38 84,48" fill="#0000ff"/>
+
+    <!-- Windows -->
+    <rect x="85" y="75" width="6" height="4" fill="#ffffff"/>
+    <rect x="85" y="90" width="6" height="4" fill="#ffffff"/>
+  </g>
+
+  <!-- Gatehouse -->
+  <g id="gatehouse">
+    <rect x="48" y="70" width="32" height="40" fill="url(#gateGrad)"/>
+
+    <!-- Crenellations -->
+    <g id="gate-crenellation">
+      <rect x="50" y="65" width="4" height="5" fill="#555"/>
+      <rect x="58" y="65" width="4" height="5" fill="#555"/>
+      <rect x="66" y="65" width="4" height="5" fill="#555"/>
+      <rect x="74" y="65" width="4" height="5" fill="#555"/>
+    </g>
+
+    <!-- Windows -->
+    <rect x="52" y="85" width="6" height="4" fill="#ffffff"/>
+    <rect x="74" y="85" width="6" height="4" fill="#ffffff"/>
+  </g>
+</svg>`},
+{name:'Castle_OSS_120B.svg', svg:`
+<svg width="128" height="128"
+     viewBox="0 0 128 128"
+     xmlns="http://www.w3.org/2000/svg">
+
+  <!-- ============================================================= -->
+  <!-- ====================== DEFINITIONS ========================= -->
+  <!-- ============================================================= -->
+  <defs>
+    <!-- Sky & ground -->
+    <linearGradient id="skyGrad"   x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#87CEEB"/>
+      <stop offset="100%" stop-color="#5DA9E9"/>
+    </linearGradient>
+    <linearGradient id="groundGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#7CFC00"/>
+      <stop offset="100%" stop-color="#228B22"/>
+    </linearGradient>
+
+    <!-- Castle walls -->
+    <linearGradient id="wallGrad"  x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#D3D3D3"/>
+      <stop offset="100%" stop-color="#A9A9A9"/>
+    </linearGradient>
+    <linearGradient id="towerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#E8E8E8"/>
+      <stop offset="100%" stop-color="#BEBEBE"/>
+    </linearGradient>
+
+    <!-- Draw‑bridge -->
+    <linearGradient id="bridgeGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#C18F55"/>
+      <stop offset="100%" stop-color="#8B5A2B"/>
+    </linearGradient>
+
+    <!-- Roofs -->
+    <radialGradient id="roofGrad" cx="50%" cy="30%" r="70%">
+      <stop offset="0%"   stop-color="#FF7F7F"/>
+      <stop offset="100%" stop-color="#C12727"/>
+    </radialGradient>
+
+    <!-- Window glass -->
+    <linearGradient id="windowGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#A7D8FF"/>
+      <stop offset="100%" stop-color="#E6F4FF"/>
+    </linearGradient>
+
+    <!-- Cloud blur -->
+    <filter id="cloudBlur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2"/>
+    </filter>
+  </defs>
+
+  <!-- ============================================================= -->
+  <!-- ========================= BACKGROUND ======================== -->
+  <!-- ============================================================= -->
+  <rect x="0" y="0"   width="128" height="96" fill="url(#skyGrad)"/>
+
+  <!-- Cloud #1 -->
+  <g filter="url(#cloudBlur)">
+    <ellipse cx="35" cy="25" rx="20" ry="12" fill="#FFFFFF"/>
+    <ellipse cx="45" cy="22" rx="18" ry="11" fill="#FFFFFF"/>
+    <ellipse cx="55" cy="27" rx="19" ry="13" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Cloud #2 -->
+  <g filter="url(#cloudBlur)">
+    <ellipse cx="90" cy="30" rx="18" ry="11" fill="#FFFFFF"/>
+    <ellipse cx="100" cy="27" rx="16" ry="10" fill="#FFFFFF"/>
+    <ellipse cx="110" cy="33" rx="17" ry="12" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Ground -->
+  <rect x="0" y="96" width="128" height="32" fill="url(#groundGrad)"/>
+
+  <!-- ============================================================= -->
+  <!-- =========================== CASTLE ========================== -->
+  <!-- ============================================================= -->
+
+  <!-- Main wall (base) -->
+  <rect x="30" y="56" width="68" height="40"
+        fill="url(#wallGrad)" stroke="#777" stroke-width="1"/>
+
+  <!-- Battlements on the main wall -->
+  <g fill="#555">
+    <rect x="30" y="52" width="8" height="4"/>
+    <rect x="40" y="52" width="8" height="4"/>
+    <rect x="50" y="52" width="8" height="4"/>
+    <rect x="60" y="52" width="8" height="4"/>
+    <rect x="70" y="52" width="8" height="4"/>
+    <rect x="80" y="52" width="8" height="4"/>
+  </g>
+
+  <!--  Side towers (left & right) -->
+  <!-- Left tower -->
+  <rect x="20" y="38" width="20" height="58"
+        fill="url(#towerGrad)" stroke="#777" stroke-width="1"/>
+
+  <!-- Left battlements -->
+  <g fill="#555">
+    <rect x="20" y="34" width="6" height="4"/>
+    <rect x="28" y="34" width="6" height="4"/>
+  </g>
+
+  <!-- Left conical roof -->
+  <polygon points="20,38 30,15 40,38"
+           fill="url(#roofGrad)" stroke="#550000" stroke-width="1"/>
+
+  <!-- Right tower -->
+  <rect x="88" y="38" width="20" height="58"
+        fill="url(#towerGrad)" stroke="#777" stroke-width="1"/>
+  <!-- Right battlements -->
+  <g fill="#555">
+    <rect x="88" y="34" width="6" height="4"/>
+    <rect x="96" y="34" width="6" height="4"/>
+  </g>
+  <!-- Right conical roof -->
+  <polygon points="88,38 98,15 108,38"
+           fill="url(#roofGrad)" stroke="#550000" stroke-width="1"/>
+
+  <!-- Central keep (new section) -->
+  <rect x="56" y="28" width="16" height="68"
+        fill="url(#towerGrad)" stroke="#777" stroke-width="1"/>
+  <!-- Keep battlements -->
+  <g fill="#555">
+    <rect x="56" y="24" width="6" height="4"/>
+    <rect x="66" y="24" width="6" height="4"/>
+  </g>
+  <!-- Conical roof on the keep -->
+  <polygon points="56,28 64,5 72,28"
+           fill="url(#roofGrad)" stroke="#550000" stroke-width="1"/>
+
+  <!-- Gate & draw‑bridge -->
+  <!-- Simple arched gate opening -->
+  <path d="M56,96 L56,68 Q64,60 72,68 L72,96 Z"
+        fill="#444" stroke="#222" stroke-width="1"/>
+  <!-- Lowered draw‑bridge -->
+  <polygon points="56,96 58,102 70,102 72,96"
+           fill="url(#bridgeGrad)" stroke="#3B2F20" stroke-width="0.5"/>
+  <!-- Bridge chains (optional decorative) -->
+  <line x1="58" y1="102" x2="58" y2="108" stroke="#555" stroke-width="1"/>
+  <line x1="70" y1="102" x2="70" y2="108" stroke="#555" stroke-width="1"/>
+
+  <!-- ============================================================= -->
+  <!-- =========================== WINDOWS ========================= -->
+  <!-- ============================================================= -->
+  <g fill="url(#windowGrad)" stroke="#555" stroke-width="0.5">
+    <!-- Main wall windows (4 rows, 3 per row) -->
+    <rect x="38" y="60" width="6" height="8"/>
+    <rect x="48" y="60" width="6" height="8"/>
+    <rect x="58" y="60" width="6" height="8"/>
+    <rect x="68" y="60" width="6" height="8"/>
+    <rect x="78" y="60" width="6" height="8"/>
+
+    <rect x="38" y="72" width="6" height="8"/>
+    <rect x="48" y="72" width="6" height="8"/>
+    <rect x="58" y="72" width="6" height="8"/>
+    <rect x="68" y="72" width="6" height="8"/>
+    <rect x="78" y="72" width="6" height="8"/>
+
+    <!-- Left tower windows -->
+    <rect x="26" y="45" width="5" height="7"/>
+    <rect x="26" y="58" width="5" height="7"/>
+
+    <!-- Right tower windows -->
+    <rect x="97" y="45" width="5" height="7"/>
+    <rect x="97" y="58" width="5" height="7"/>
+
+    <!-- Keep (central) windows -->
+    <rect x="60" y="38" width="4" height="6"/>
+    <rect x="68" y="38" width="4" height="6"/>
+    <rect x="60" y="50" width="4" height="6"/>
+    <rect x="68" y="50" width="4" height="6"/>
+  </g>
+
+  <!-- ============================================================= -->
+  <!-- =========================== FLAGS =========================== -->
+  <!-- ============================================================= -->
+  <g stroke="#333" stroke-width="0.5">
+    <!-- Left tower flag (red) -->
+    <rect x="30" y="8"   width="2" height="12" fill="#555"/>
+    <polygon points="32,8 42,13 32,18"
+             fill="#C12727"/>
+
+    <!-- Central keep flag (blue) -->
+    <rect x="66" y="-5"  width="2" height="14" fill="#555"/>
+    <polygon points="68,-5 78,0 68,5"
+             fill="#1E90FF"/>
+
+    <!-- Right tower flag (gold) -->
+    <rect x="100" y="8"  width="2" height="12" fill="#555"/>
+    <polygon points="102,8 112,13 102,18"
+             fill="#FFD700"/>
+  </g>
+</svg>
+`},
+{name:'Washington', svg:`
+<svg width="128" height="128" viewBox="0 0 128 128" xmlns="http://www.w3.org/2000/svg" aria-label="Outline of the state of Washington">
+  <g transform="translate(64 64) rotate(-12) translate(-64 -64)">
+    <path
+      d="M102.07324,7.6117734L106.43807,9.0667177L116.1377,11.814946L124.7057,13.754871L144.7516,19.412988L167.70739,25.071104L182.93051,28.278277L169.29815,91.864088L156.85315,88.33877L141.34514,84.768091L126.11585,84.801329L125.66028,83.45663L120.06106,85.635923L115.46563,84.899179L113.31866,83.315125L112.00545,83.973101L107.26979,83.832858L105.57143,82.483225L100.30839,80.370922L99.573419,80.51784L95.184297,78.993392L93.290999,80.810771L87.025093,80.512038L81.099395,76.386336L81.878352,75.453573L81.999575,67.776121L79.717576,63.93642L75.602368,63.32938L74.924958,60.818764L72.649446,60.361832L69.094498,61.592408L66.831251,58.373161L67.154572,55.463272L69.9028,55.139951L71.519405,51.09844L68.932837,49.966816L69.094498,46.248625L73.459331,45.601984L70.711103,42.853756L69.256158,35.740695L69.9028,32.830807L69.9028,24.909444L68.124535,21.676234L70.387782,12.299927L72.489368,12.784908L74.914275,15.694797L77.662503,18.281364L80.895712,20.22129L85.422205,22.322876L88.493756,22.969518L91.403645,24.424462L94.798518,25.394425L97.061764,25.232765L97.061764,22.807857L98.355048,21.676234L100.45663,20.38295L100.77996,21.514574L101.10328,23.292839L98.840029,23.77782L98.516708,25.879406L100.29497,27.334351L101.4266,29.759258L102.07324,31.699183L103.52818,31.537523L103.68984,30.244239L102.71988,28.950955L102.2349,25.717746L103.0432,23.939481L102.39656,22.484537L102.39656,20.22129L104.17483,16.66476L103.0432,14.078192L100.61829,9.2283781L100.94162,8.4200758L102.07324,7.6117734ZM92.616548,13.590738L94.637312,13.429078L95.122294,14.803197L96.658073,13.186582L99.002155,13.186582L99.810458,14.722361L98.274678,16.419801L98.92133,17.228114L98.193853,19.248875L96.819734,19.653021C96.819734,19.653021,95.930596,19.733857,95.930596,19.410536C95.930596,19.087215,97.385551,16.823958,97.385551,16.823958L95.688111,16.258141L95.36479,17.713095L94.637312,18.359737L93.10153,16.09648L92.616548,13.590738Z"
+      fill="green"
+      stroke="black"
+      stroke-width="1"
+      vector-effect="non-scaling-stroke"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+      transform="translate(4,20.458474244) scale(1.033598328) translate(-66.831251,-7.6117734)"
+    />
+  </g>
+</svg>
+`},
+{name:'Oregon', svg:`
+<svg width="128" height="128" viewBox="0 0 220 220" xmlns="http://www.w3.org/2000/svg" aria-label="Outline of the state of Oregon">
+  <g transform="translate(105.0201865 117.957793) rotate(-13) translate(-170-210) scale(1.7)">
+    <path
+      d="M148.72184,175.53153L157.57154,140.73002L158.62233,136.5005L160.9767,130.87727L160.36119,129.71439L157.84633,129.66821L156.56473,127.99751L157.02197,126.53344L157.52538,123.28656L161.98353,117.79961L163.81251,116.70046L164.95562,115.55735L166.44166,111.99172L170.48872,106.32232L174.05435,102.45992L174.28297,99.008606L171.01411,96.539924L169.2307,91.897299L156.56693,88.285329L141.47784,84.741679L126.04582,84.855985L125.58858,83.484256L120.10163,85.54186L115.64349,84.970301L113.24295,83.36994L111.98553,84.055815L107.29877,83.827183L105.5841,82.455454L100.32578,80.39785L99.525598,80.512166L95.181768,79.02611L93.238477,80.855093L87.065665,80.512166L81.121482,76.396957L81.807347,75.596777L82.035968,67.823604L79.749743,63.937027L75.634535,63.365468L74.94867,60.850621L72.594738,60.384056L66.796213,62.44284L64.532966,68.909258L61.299757,78.932207L58.066547,85.398626L53.055073,99.463087L46.588654,113.04256L38.505631,125.65208L36.565705,128.56197L35.757403,137.12997L36.143498,149.2102L148.72184,175.53153Z"
+      fill="green"
+      stroke="black"
+      stroke-width="1"
+      vector-effect="non-scaling-stroke"
+      stroke-linejoin="round"
+      stroke-linecap="round"
+    />
+  </g>
+</svg>
+
+`},
+{name:'Battleaxe_120B', svg:`
+<!-- Battle‑Axe Icon – 128 × 128 px -->
+<svg width="128" height="128"
+     viewBox="0 0 128 128"
+     xmlns="http://www.w3.org/2000/svg"
+     version="1.1">
+
+  <!-- ==================== DEFINITIONS ==================== -->
+  <defs>
+    <!-- Metal gradient for the axe head -->
+    <radialGradient id="metalGrad" cx="50%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#e5e5e5"/>
+      <stop offset="45%" stop-color="#c2c2c2"/>
+      <stop offset="100%" stop-color="#7a7a7a"/>
+    </radialGradient>
+
+    <!-- Wood gradient for the handle -->
+    <linearGradient id="woodGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#b57d44"/>
+      <stop offset="30%"  stop-color="#a56c33"/>
+      <stop offset="70%"  stop-color="#7e4f20"/>
+      <stop offset="100%" stop-color="#5c3611"/>
+    </linearGradient>
+
+    <!-- Simple glossy highlight for the metal -->
+    <radialGradient id="metalHighlight" cx="30%" cy="30%" r="50%">
+      <stop offset="0%"   stop-color="rgba(255,255,255,0.6)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+
+    <!-- Drop‑shadow filter for a bit of depth -->
+    <filter id="dropShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="1.5" dy="2" stdDeviation="1.8"
+                    flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- ==================== HANDLE ==================== -->
+  <g filter="url(#dropShadow)">
+    <!-- Main wooden shaft -->
+    <rect x="57" y="24" width="14" height="80"
+          rx="5" ry="5"
+          fill="url(#woodGrad)"/>
+
+    <!-- Metal ferrule (the band that holds the head) -->
+    <rect x="55" y="22" width="18" height="6"
+          rx="2" ry="2"
+          fill="#777777"/>
+  </g>
+
+  <!-- ==================== AXE HEAD ==================== -->
+  <g filter="url(#dropShadow)">
+    <!-- The big metal blade (two‑sided) -->
+    <path d="
+        M64,12
+        L108,48 
+        L96,58  
+        L74,36
+        L64,46 
+        L54,36 
+        L32,58  
+        L20,48 
+        Z"
+      fill="url(#metalGrad)"/>
+
+    <!-- Glossy highlight on the metal (same shape, lighter) -->
+    <path d="
+        M64,12
+        L108,48
+        L96,58
+        L74,36
+        L64,46
+        L54,36
+        L32,58
+        L20,48
+        Z"
+      fill="url(#metalHighlight)"/>
+
+    <!-- Rivets – three simple circles -->
+    <circle cx="64" cy="38" r="2.5" fill="#555555"/>
+    <circle cx="78" cy="52" r="1.8" fill="#555555"/>
+    <circle cx="50" cy="52" r="1.8" fill="#555555"/>
+  </g>
+
+</svg>
+`},
+{name:'Spear', svg:`
+<!-- Spear Icon – 128 × 128 px -->
+<svg width="128" height="128"
+     viewBox="0 0 128 128"
+     xmlns="http://www.w3.org/2000/svg"
+     version="1.1">
+
+  <!-- ============================================================= -->
+  <!--                     DEFINITIONS (gradients, filter)          -->
+  <!-- ============================================================= -->
+  <defs>
+    <!-- Wood gradient – dark‑brown with a grain highlight -->
+    <linearGradient id="woodGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#c79a63"/>
+      <stop offset="30%"  stop-color="#b58a51"/>
+      <stop offset="70%"  stop-color="#8e652e"/>
+      <stop offset="100%" stop-color="#5d3f12"/>
+    </linearGradient>
+
+    <!-- Metal gradient for the spear‑head -->
+    <radialGradient id="metalGrad" cx="50%" cy="30%" r="80%">
+      <stop offset="0%"   stop-color="#eaeaea"/>
+      <stop offset="45%"  stop-color="#c2c2c2"/>
+      <stop offset="100%" stop-color="#777777"/>
+    </radialGradient>
+
+    <!-- Glossy highlight for the metal -->
+    <radialGradient id="metalHighlight" cx="30%" cy="30%" r="50%">
+      <stop offset="0%"   stop-color="rgba(255,255,255,0.6)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
+    </radialGradient>
+
+    <!-- Feather gradient (light tan) -->
+    <linearGradient id="featherGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%"   stop-color="#f5e6c4"/>
+      <stop offset="100%" stop-color="#d8b78a"/>
+    </linearGradient>
+
+    <!-- Drop‑shadow filter for the whole spear -->
+    <filter id="dropShadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="1.5" dy="2"
+                    stdDeviation="1.8"
+                    flood-color="#000"
+                    flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <!-- ============================================================= -->
+  <!--                           SHAFt (wood)                       -->
+  <!-- ============================================================= -->
+  <g filter="url(#dropShadow)">
+    <!-- Main shaft – long, slightly tapered at the tip side -->
+    <rect x="60" y="20" width="8" height="84"
+          rx="3" ry="3"
+          fill="url(#woodGrad)"/>
+
+    <!-- Optional decorative ring near the base (metal) -->
+    <circle cx="64" cy="28" r="4"
+            fill="#777"/>
+  </g>
+
+  <!-- ============================================================= -->
+  <!--                         SPEAR‑HEAD (metal)                   -->
+  <!-- ============================================================= -->
+  <g filter="url(#dropShadow)">
+    <!-- The metal point – a slightly beveled triangle -->
+    <path d="
+        M64,4
+        L78,24
+        L64,20
+        Z"
+      fill="url(#metalGrad)"/>
+
+    <!-- Highlight on the head (same shape, lighter) -->
+    <path d="
+        M64,4
+        L78,24
+        L64,20
+        Z"
+      fill="url(#metalHighlight)" opacity="0.45"/>
+    
+    <!-- Small rear‑guard that gives a “cross‑guard” feel -->
+    <rect x="61" y="22" width="6" height="4"
+          rx="1" ry="1"
+          fill="#555"/>
+  </g>
+
+  
+
+</svg>
+`}
+
+];
+
+  function loadDemo(){
+    const loaded = DEMO.map(({name, svg})=>{
+      svg = sanitizeSVG(svg);
+      const {w,h,vb} = parseDims(svg);
+      const blob = new Blob([svg], {type:'image/svg+xml'});
+      const url = URL.createObjectURL(blob);
+      return {name, svgText: svg, dataURL: url, width:w, height:h, viewBox:vb};
+    });
+    items = items.concat(loaded);
+    renderGrid();
+  }
+  demoBtn.addEventListener('click', loadDemo);
+
+  // Initial render
+  renderGrid();
+  loadDemo();
+})();
+</script>
+</body>
+</html>
