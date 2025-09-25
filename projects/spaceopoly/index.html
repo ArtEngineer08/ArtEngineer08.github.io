@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Space-Opoly — Solar System Edition</title>
+
+  <!-- external styles & main module -->
+  <link rel="stylesheet" href="css/main.css" />
+  <script type="module" src="src/main.js"></script>
+</head>
+
+<body>
+  <div class="app">
+    <div class="header">
+      <div></div>
+    </div>
+
+    <div class="main">
+      <!-- Player 1 (RED, left) -->
+      <section id="pCol0" class="panel playerCol p0">
+        <div class="pHead">
+          <div class="who">PLAYER 1</div>
+          <div class="cash" id="cash0">$1,500M</div>
+        </div>
+        <div class="small" id="status0">Position: Launch</div>
+
+        <div id="dice0" class="diceBox"></div>
+        <button id="p0Roll" class="btn primary">Roll Dice</button>
+
+        <div class="rowBtns" style="margin-top:8px">
+          <button id="p0Buy"  class="btn">Buy</button>
+        </div>
+        <div class="rowBtns">
+          <button id="p0PayBail" class="btn">Pay $50M Rescue</button>
+          <button id="p0UseCard" class="btn">Use Rescue Beacon</button>
+        </div>
+        <button id="p0Act" class="btn primary" style="width:100%;margin-top:8px">Action</button>
+        <div class="propList" id="props0"></div>
+      </section>
+
+      <!-- Board (center) -->
+      <section class="panel board">
+        <div id="grid" class="grid"></div>
+      </section>
+
+      <!-- Player 2 (BLUE, right) -->
+      <section id="pCol1" class="panel playerCol p1">
+        <div class="pHead">
+          <div class="who">PLAYER 2</div>
+          <div class="cash" id="cash1">$1,500M</div>
+        </div>
+        <div class="small" id="status1">Position: Launch</div>
+
+        <div id="dice1" class="diceBox"></div>
+        <button id="p1Roll" class="btn primary">Roll Dice</button>
+
+        <div class="rowBtns" style="margin-top:8px">
+          <button id="p1Buy" class="btn">Buy</button>
+        </div>
+        <div class="rowBtns">
+          <button id="p1PayBail" class="btn">Pay $50M Rescue</button>
+          <button id="p1UseCard" class="btn">Use Rescue Beacon</button>
+        </div>
+        <button id="p1Act" class="btn primary" style="width:100%;margin-top:8px">Action</button>
+        <div class="propList" id="props1"></div>
+      </section>
+
+      <!-- Game Log – placeholder only; JS will relocate it into the board -->
+      <div id="log" class="log"></div>
+    </div>
+  </div>
+
+  <!-- Card-popup modal -->
+  <div id="overlay" class="overlay" role="dialog" aria-modal="true">
+    <div class="card">
+      <h2 id="ovTitle">Card</h2>
+      <p  id="ovText"></p>
+      <div class="actions">
+        <button id="ovOK" class="btn primary">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global context-menu -->
+  <div id="ctx" class="ctxMenu" style="display:none"></div>
+</body>
+</html>
