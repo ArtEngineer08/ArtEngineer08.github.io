@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Endless Sky Trader’s Starmap</title>
+  <meta name="description" content="In-world UI mockup for a starfaring trader in Endless Sky: route planning, fuel range, trade signals, and risk overlays." />
+  <style>
+    * { box-sizing: border-box }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 28px; background:#f4f4f4; color:#111;
+      transition: background-color .25s ease, color .25s ease, border-color .25s ease;
+      max-width: 900px; margin-left:auto; margin-right:auto;
+    }
+    body.dark { background:#1f1f1f; color:#f5f5f5 }
+    a { color: inherit }
+
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:12px }
+    .left { display:flex; align-items:center; gap:12px }
+    h1 { margin:0 0 6px }
+    .meta { color:#666; font-size:12px }
+    body.dark .meta { color:#c9c9c9 }
+
+    /* hero image: any aspect ratio */
+    .hero {
+      width:100%; height:auto; object-fit: contain;
+      border-radius:12px; display:block; max-height:70vh;
+    }
+
+    /* CTA button container + button */
+    .cta { display:flex; justify-content:center; margin-top:14px }
+    .cta a {
+      display:inline-block; text-align:center; text-decoration:none;
+      padding:14px 22px; font-size:18px; font-weight:700;
+      border-radius:999px; border:1px solid #222;
+      background:#fff; color:#111; box-shadow:0 2px 6px rgba(0,0,0,.08);
+      transition: transform .08s ease, background .25s ease, color .25s ease, border-color .25s ease;
+    }
+    .cta a:focus { outline: 3px solid #5a9; outline-offset: 2px }
+    .cta a:hover { transform: translateY(-1px) }
+    body.dark .cta a { background:#2a2a2a; color:#f5f5f5; border-color:#3a3a3a }
+
+    .card {
+      border:1px solid #e0e0e0; border-radius:12px; background:#fff;
+      padding:14px; margin-top:14px;
+      transition: background .25s ease, border-color .25s ease;
+    }
+    body.dark .card { background:#222; border-color:#3a3a3a }
+
+    /* dark-mode switch (labels always black) */
+    .theme-switch {
+      position: relative; width: 90px; height: 32px; border-radius: 16px;
+      background:#ccc; border:1px solid #aaa; display:inline-flex; align-items:center;
+      justify-content:space-between; padding:0 10px; cursor:pointer; user-select:none; gap:6px;
+    }
+    .theme-switch span { font-size:12px; line-height:1; pointer-events:none; color:#000 }
+    .switch-dot { position:absolute; top:2px; left:2px; width:28px; height:28px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); transition: transform .25s ease }
+    body.dark .switch-dot { transform: translateX(58px) }
+
+    /* tiny helper for inline keycaps */
+    kbd {
+      font: 12px/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      background: #eee; border:1px solid #ddd; border-bottom-width:2px; border-radius:6px;
+      padding:2px 6px; white-space:nowrap;
+    }
+    body.dark kbd { background:#333; border-color:#444 }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="left">
+      <a href="../../">← Back to portfolio</a>
+    </div>
+    <div class="theme-switch" id="theme-switch" role="button" aria-label="Toggle dark mode" aria-pressed="false" tabindex="0">
+      <span>Light</span><div class="switch-dot"></div><span>Dark</span>
+    </div>
+  </header>
+
+  <img class="hero" src="./starmap-endless-sky1.png" alt="Endless Sky Trader’s Starmap UI preview"
+       onerror="this.onerror=null;this.src='../../images/default.png';">
+
+  <!-- Big centered CTA button right below the image -->
+  <div class="cta">
+    <a href="./demo/" aria-label="Open the Endless Sky Trader’s Starmap interactive demo">Try the Interactive Demo</a>
+  </div>
+
+  <h1>Endless Sky Trader’s Starmap</h1>
+  <p class="meta">In-world navigation and commerce HUD for a roaming merchant: plot routes, gauge fuel, and sniff out profit while dodging trouble.</p>
+
+  <div class="card">
+    <h2>Overview</h2>
+    <p>
+      This mockup imagines the starmap a veteran trader would actually use aboard ship in the game 
+	  <a href="https://github.com/endless-sky/endless-sky" target="_blank" rel="noopener noreferrer">Endless Sky</a>.
+	  <br>
+	  <br>
+      It emphasizes legibility at-a-glance during flight while revealing deeper trade and risk intel on demand.
+      This mock-up shows how all the details in the game's map could be themed as an in-world UI for the captain.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>How it works</h2>
+    <ul>
+      <li><strong>Port Details:</strong> Click on a star system to see the details of that system's ports (randomly-generated for this mock-up).</li>
+      <li><strong>Trade Signals:</strong> Inline badges summarize buy/sell deltas from your last port intel; todo: expand to see commodity spreads and cargo fit.</li>
+      <li><strong>Risk &amp; Territory Layers:</strong> See the badge of the faction that controls the system, pirate activity, and security.</li>
+      <li><strong>System Drawer:</strong> Side panel includes local services (outfitter/shipyard/bank), hazards, and asteroids.</li>
+    </ul>
+  </div>
+
+  <script>
+    // Dark-mode toggle (persists; respects system as default)
+    (() => {
+      const STORAGE_KEY = 'portfolioDarkMode';
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const saved = localStorage.getItem(STORAGE_KEY);
+      const shouldDark = saved === null ? prefersDark : saved === 'true';
+      if (shouldDark) document.body.classList.add('dark');
+
+      const btn = document.getElementById('theme-switch');
+      const setPressed = () => btn.setAttribute('aria-pressed', document.body.classList.contains('dark') ? 'true' : 'false');
+      setPressed();
+
+      function toggle() {
+        document.body.classList.toggle('dark');
+        localStorage.setItem(STORAGE_KEY, document.body.classList.contains('dark'));
+        setPressed();
+      }
+      btn.addEventListener('click', toggle);
+      btn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+      });
+    })();
+  </script>
+</body>
+</html>
