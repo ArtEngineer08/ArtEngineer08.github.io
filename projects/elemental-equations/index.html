@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Elemental Equations</title>
+  <meta name="description" content="Locally hosted LLM game exploring concept combinations to create new ideas, fully offline." />
+  <style>
+    * { box-sizing: border-box }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 28px; background:#f4f4f4; color:#111;
+      transition: background-color .25s ease, color .25s ease, border-color .25s ease;
+      max-width: 900px; margin-left:auto; margin-right:auto;
+    }
+    body.dark { background:#1f1f1f; color:#f5f5f5 }
+    a { color: inherit }
+
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:12px }
+    .left { display:flex; align-items:center; gap:12px }
+    h1 { margin:0 0 6px }
+    .meta { color:#666; font-size:12px }
+    body.dark .meta { color:#c9c9c9 }
+
+    /* hero image: any aspect ratio */
+    .hero {
+      width:100%; height:auto; object-fit: contain;
+      border-radius:12px; display:block; max-height:70vh;
+    }
+
+    .card {
+      border:1px solid #e0e0e0; border-radius:12px; background:#fff;
+      padding:14px; margin-top:14px;
+      transition: background .25s ease, border-color .25s ease;
+    }
+    body.dark .card { background:#222; border-color:#3a3a3a }
+
+    /* dark-mode switch (labels always black) */
+    .theme-switch {
+      position: relative; width: 90px; height: 32px; border-radius: 16px;
+      background:#ccc; border:1px solid #aaa; display:inline-flex; align-items:center;
+      justify-content:space-between; padding:0 10px; cursor:pointer; user-select:none; gap:6px;
+    }
+    .theme-switch span { font-size:12px; line-height:1; pointer-events:none; color:#000 }
+    .switch-dot { position:absolute; top:2px; left:2px; width:28px; height:28px; border-radius:50%; background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); transition: transform .25s ease }
+    body.dark .switch-dot { transform: translateX(58px) }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="left">
+      <a href="../../">← Back to portfolio</a>
+    </div>
+    <div class="theme-switch" id="theme-switch" role="button" aria-label="Toggle dark mode" aria-pressed="false" tabindex="0">
+      <span>Light</span><div class="switch-dot"></div><span>Dark</span>
+    </div>
+  </header>
+
+  <img class="hero" src="./elemental-equations1.png" alt="Elemental Equations preview"
+       onerror="this.onerror=null;this.src='../../images/default.png';">
+
+  <h1>Elemental Equations</h1>
+  <p class="meta">LLM latent-space exploration game. Fully offline via a locally hosted LLM that returns API calls.</p>
+
+  <div class="card">
+    <h2>Overview</h2>
+    <p>
+	  I created this game before Infinite Crafter did the same things and became a big hit. It started as an interesting exploration
+	  into LLM's latent space representation of concepts and turned into a little game. 
+	<br>
+	<br>
+      Start with four basic concepts—Earth, Wind, Fire, and Water—and combine them to create new concepts.
+      The objective is to explore combinations and ultimately create the concept of “Life.”
+      This project runs entirely offline by calling a locally hosted LLM endpoint and returning the result.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>How it works</h2>
+    <ul>
+      <li>Click, Press, or Drag two concepts into the combination boxes and choose an operator (<code>+</code> or <code>-</code>).</li>
+      <li>If the combination new, a new concept is created and added to the board.</li>
+      <li>Local LLM endpoint (works with LM Studio): <code>http://localhost:1234/v1/chat/completions</code></li>
+	  <li>Created Concepts are persistent through Local Storage.</li>
+	  <li>Easy Mode removes the limit of levels for concepts, also adds a search feature for concepts.</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Rules</h2>
+    <ul>
+      <li>Each concept has a level from 0–5; you can only combine concepts if both levels are &lt; 5.</li>
+      <li>Order and operator matter (<code>earth - water</code> ≠ <code>water - earth</code>).</li>
+      <li>Previously made combinations cannot be repeated.</li>
+    </ul>
+  </div>
+
+  <script>
+    // Dark-mode toggle (persists; respects system as default)
+    (() => {
+      const STORAGE_KEY = 'portfolioDarkMode';
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const saved = localStorage.getItem(STORAGE_KEY);
+      const shouldDark = saved === null ? prefersDark : saved === 'true';
+      if (shouldDark) document.body.classList.add('dark');
+
+      const btn = document.getElementById('theme-switch');
+      const setPressed = () => btn.setAttribute('aria-pressed', document.body.classList.contains('dark') ? 'true' : 'false');
+      setPressed();
+
+      function toggle() {
+        document.body.classList.toggle('dark');
+        localStorage.setItem(STORAGE_KEY, document.body.classList.contains('dark'));
+        setPressed();
+      }
+      btn.addEventListener('click', toggle);
+      btn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+      });
+    })();
+  </script>
+</body>
+</html>
