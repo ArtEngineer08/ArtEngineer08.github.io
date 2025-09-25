@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>N64 Twit-Viewer — taller cards, bigger text, 28-char wrap (slow transitions)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+<style>
+  :root{ --bg:#05070e; --ink:#e6f1ff; --muted:#9bb0c9; --accent:#7aa7ff; }
+  html,body{height:100%;margin:0;background:radial-gradient(80% 60% at 50% 50%, #0b1024 0%, #05070e 60%, #000 100%);color:var(--ink);font:14px/1.3 system-ui,Segoe UI,Inter,Arial}
+  *{box-sizing:border-box}
+  .frame{width:min(96vw,980px); aspect-ratio:4/3; margin:auto; position:relative; border-radius:18px; background:linear-gradient(#0b0f22,#060815);
+    box-shadow:0 30px 90px rgba(0,0,0,.7), inset 0 0 0 2px rgba(32,48,120,.4), inset 0 0 60px rgba(20,28,64,.8); overflow:hidden;}
+  #viewport{width:100%; height:100%; image-rendering: pixelated; display:block; transform:translateZ(0);}
+  .hud{position:absolute; inset:0; pointer-events:none; display:flex; flex-direction:column; justify-content:space-between;}
+  .bar{height:44px; display:flex; align-items:center; gap:12px; padding:0 16px; background:linear-gradient(to bottom, rgba(18,26,60,.85), rgba(8,12,28,.85)); border-bottom:1px solid rgba(120,160,255,.15); text-shadow:0 1px 0 #000;}
+  .bar.bottom{border-top:1px solid rgba(120,160,255,.15); border-bottom:0; background:linear-gradient(to top, rgba(18,26,60,.85), rgba(8,12,28,.85));}
+  .title{font-weight:700; letter-spacing:.5px; color:#a9c4ff}
+  .feed{margin-left:auto; color:var(--muted)}
+  .legend{font-size:12px; color:#cfe0ff}
+  .kbd{display:inline-block; padding:2px 6px; border:1px solid rgba(150,180,255,.35); border-radius:4px; background:rgba(22,32,70,.6)}
+  .menu{position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:360px; padding:14px 16px; background:rgba(10,14,28,.92);
+    border:1px solid rgba(130,160,255,.4); box-shadow:0 10px 40px rgba(0,0,0,.7); display:none; pointer-events:auto;}
+  .menu.active{display:block}
+  .menu h3{margin:0 0 8px 0; font-size:16px; color:#9eb6ff}
+  .menu .row{padding:6px 8px; border-radius:6px}
+  .menu .row.sel{background:rgba(230,241,255,.95); color:#0b0f1c}
+  .hint{text-align:center; font-size:12px; color:#9bb0c9; margin-top:8px}
+  .fps{position:absolute; right:8px; top:52px; font-size:12px; color:#9bb0c9}
+</style>
+</head>
+<body>
+<div class="frame">
+  <canvas id="viewport" aria-label="N64 Twit-Viewer"></canvas>
+
+  <div class="hud" aria-hidden="true">
+    <div class="bar top">
+      <div class="title">TWIT-VIEWER • N64 (demo)</div>
+      <div class="legend">D-Pad: <span class="kbd">↑/↓</span> Select &nbsp; <span class="kbd">←/→</span> Spin &nbsp; A: <span class="kbd">X</span> Open &nbsp; B: <span class="kbd">Z</span> Back &nbsp; L/R: <span class="kbd">Q/E</span> Page &nbsp; Start: <span class="kbd">Enter</span> &nbsp; Select: <span class="kbd">Shift</span></div>
+      <div class="feed" id="feedName">Home</div>
+    </div>
+    <div class="bar bottom"><div>90s 3D: low-poly, chunky pixels, distance fog, affine-ish textures ✨</div></div>
+    <div class="fps" id="fps">FPS: 60</div>
+  </div>
+
+  <div class="menu" id="menuBox" role="dialog" aria-modal="true">
+    <h3>Start Menu</h3>
+    <div class="row">Refresh</div><div class="row">Feeds…</div><div class="row">About</div>
+    <div class="hint">Use ↑/↓ and X to choose. Z to close.</div>
+  </div>
+
+  <div class="menu" id="feedsBox" role="dialog" aria-modal="true">
+    <h3>Choose Feed</h3>
+    <div class="row">Home</div><div class="row">Mentions</div><div class="row">News</div>
+    <div class="hint">Use ↑/↓ and X to select. Z to cancel.</div>
+  </div>
+</div>
+
+<script>
+/* ---------------- Data ---------------- */
+const feeds = {
+  Home: [
+    T('@alice','3m','This is a deliberately longer tweet to test twenty eight column wrapping across four lines; extra text should be clipped cleanly without glitches.',42,128),
+    T('@bob','12m','Working on shader tweaks: subtle fog, softer lights, and a tiny wobble. How does it feel on your display? [link]',9,31),
+    T('@carol','28m','Reminder: Select cycles feeds; Start opens a tiny menu. Arrow keys navigate the carousel smoothly at a slower pace.',5,22),
+    T('@dave','1h','I changed the card aspect ratio so text is larger and easier to read. The new height fits four tidy lines.',11,47),
+    T('@eve','2h','Profiling notes: texture uploads are cheap; the heavy part is layout during rapid selection, so easing helps a lot.',7,29),
+    T('@frank','2h','Keyboard mapping: X opens, Z backs out, Q/E page by five, and Shift swaps the feed. Classic kiosk vibes.',4,18),
+    T('@grace','3h','Fun bug: cards were turning edge-on at center because they faced the origin. Billboarding toward the camera fixed that.',13,64),
+    T('@heidi','4h','Typography test: punctuation, commas, and emojis ⏱️♥️↻ should not break our line width calculations.',6,26),
+    T('@ivan','5h','UI string with numbers 1234567890 and mixed case to ensure the monospace font stays aligned like a grid.',3,15),
+    T('@judy','6h','Thread idea: show 1/5 with left and right to browse replies. For now we render a single card with wider text.',2,11),
+    T('@kim','7h','Extremely wordy description that meanders on purpose so we can see clipping at the fourth line without layout tears.',8,33),
+    T('@leo','8h','If you notice shimmering on thin strokes, try backing the camera off a hair or lowering the canvas resolution.',4,20),
+    T('@mona','9h','Parallax stars in the back layer march left to right slowly; they add motion without distracting the eye.',5,21),
+    T('@nick','10h','I swapped the highlight scale from instant to eased so the selected card gently swells instead of snapping.',6,24),
+    T('@opal','11h','Hot tip: long words may overflow if a single token exceeds the wrap width. Keep tokens shorter than twenty eight.',3,13),
+    T('@pax','12h','Controller hint: if your browser eats key repeats, tap instead of holding. The easing will still feel smooth.',2,9),
+    T('@quinn','13h','We could add a CRT mask option later, but scanlines already sell the late nineties look pretty well.',7,28),
+    T('@rue','14h','Color test: background navy, accents in sky blue, and ink tinted toward ice for readable contrast.',1,8),
+    T('@sage','15h','Accessibility pass: larger type, higher contrast, and minimal flicker during transitions.',3,17),
+    T('@tala','16h','Feature wish: cache ten cards ahead so paging feels instant even on slow machines.',4,14),
+    T('@uma','17h','Today I learned that tiny easing constants make the carousel feel calmer without feeling sluggish. Nice.',5,19),
+    T('@viktor','18h','Camera auto-fit computes distance from FOV to keep width and height inside the frame with a small margin.',6,23),
+    T('@wren','19h','Testing multiline content: line one explains the idea; line two fills space; line three repeats; line four ends.',4,16),
+    T('@yuki','20h','Last note for this pass: counts are clamped to three digits so we never overflow the header line.',2,10)
+  ],
+  Mentions: [
+    T('@you','2m','@alice Thanks for the longer samples. I can now verify wrapping at twenty eight characters for four full lines.',1,6),
+    T('@retroDev','23m','@you The taller cards feel authentic, like a late nineties kiosk at a game shop. Nice touch with fog!',3,15),
+    T('@pixelnerd','1h','@you FYI the starfield pops on OLED; might add a dimmer toggle for dark rooms. Still looks great.',2,9),
+    T('@shadercat','2h','@you Consider a mild dither in UI panels to mimic console bandwidth. Might be overkill, but could be fun.',1,7),
+    T('@toolsmith','3h','@you Slow transitions read better on long text. The dt based easing keeps motion consistent at any FPS.',2,11),
+    T('@qa','4h','@you Edge cases: empty tweets, single short word, and text with many small words that wrap frequently.',1,5),
+    T('@archivist','5h','@you Please keep a build with the original aspect for comparison. Regression tests love baselines.',0,4),
+    T('@a11y','6h','@you Increased font size passes quick contrast checks; next step is focus rings for keyboard users.',1,8),
+    T('@perf','7h','@you Carousel angle smoothing at 0.5 Hz feels good; 0.3 Hz was too sleepy on my laptop.',2,10),
+    T('@doc','8h','@you Could you document the key bindings on a help card? Discoverability matters for demos.',0,3),
+    T('@mentor','9h','@you Proud of the clarity here. You kept the retro vibes while making the text readable. Ship it.',3,12),
+    T('@tester','10h','@you Longest mention body so far to make sure the fourth line truncates without showing a partial glyph at the bottom edge.',1,6)
+  ],
+  News: [
+    T('@newsbot','5m','Today in UI history: texture mapped panels defined a look that still reads well on low resolution displays.',23,109),
+    T('@spacewatch','35m','Comms relay aligned; telemetry shows stable signal even with added parallax background layers.',9,41),
+    T('@pixelpress','1h','Design note: padding and margins matter more than fancy shaders when readability is the goal.',7,33),
+    T('@industry','2h','Studios revisit classic console styles for modern dashboards, citing immediate comprehension and charm.',11,56),
+    T('@events','3h','Retro Jam week: teams ship tiny interfaces that run in strict budgets—fonts, tiles, and color discipline.',8,29),
+    T('@devlog','4h','Patch notes: taller cards, bigger font, slower transitions, and camera auto-fit for detail mode.',12,48),
+    T('@ux','5h','Users read faster when line length is limited. Twenty eight characters works well for this card width.',5,22),
+    T('@graphics','6h','Mipmaps with nearest filtering deliver crisp edges while avoiding moiré during gentle motion.',4,18),
+    T('@net','7h','Offline first is back: caching ten to twenty cards prevents hiccups when paging through a feed.',6,24),
+    T('@final','8h','Closing thought: effects are seasoning; the main course is clear text and predictable motion.',10,45)
+  ]
+};
+function T(handle, age, text, rt, fav){return {handle, age, text, rt, fav};}
+
+/* ---------------- Three.js ---------------- */
+const canvas = document.getElementById('viewport');
+const renderer = new THREE.WebGLRenderer({canvas, antialias:false, alpha:false});
+renderer.setPixelRatio(1);
+const BASE_W = 320, BASE_H = 240;
+renderer.setSize(BASE_W, BASE_H, false);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x060a18);
+// farther fog so zoomed-out view stays clear
+scene.fog = new THREE.Fog(0x060a18, 8, 20);
+
+/* --- Camera defaults (define BEFORE creating the camera) --- */
+const DEFAULT_POS  = new THREE.Vector3(0, 1.8, 12.0); // higher & farther back
+const DEFAULT_LOOK = new THREE.Vector3(0, 0.2,  0.0); // looking down more
+let camPosTarget  = DEFAULT_POS.clone();
+let camLookTarget = DEFAULT_LOOK.clone();
+let camLook       = DEFAULT_LOOK.clone();
+
+/* Camera */
+const camera = new THREE.PerspectiveCamera(55, BASE_W/BASE_H, 0.1, 100);
+camera.position.copy(DEFAULT_POS);
+camera.lookAt(DEFAULT_LOOK);
+
+/* Lights */
+scene.add(new THREE.AmbientLight(0x8899cc, 0.7));
+const keyLight = new THREE.DirectionalLight(0xcfe0ff, 0.8);
+keyLight.position.set(1,2,1);
+scene.add(keyLight);
+
+/* Stars */
+{
+  const starGeo = new THREE.BufferGeometry();
+  const COUNT = 500;
+  const positions = new Float32Array(COUNT*3);
+  for(let i=0;i<COUNT;i++){
+    positions[i*3+0] = (Math.random()-0.5)*40;
+    positions[i*3+1] = (Math.random()*10)+1;
+    positions[i*3+2] = -Math.random()*40;
+  }
+  starGeo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+  const starMat = new THREE.PointsMaterial({color:0xffffff, size:0.06, sizeAttenuation:true});
+  scene.add(new THREE.Points(starGeo, starMat));
+}
+/* Floor */
+{
+  const geo = new THREE.PlaneGeometry(40, 40, 1, 1);
+  const mat = new THREE.MeshLambertMaterial({color:0x0a0f2a});
+  const floor = new THREE.Mesh(geo, mat);
+  floor.rotation.x = -Math.PI/2; floor.position.y = -1.4; scene.add(floor);
+}
+
+/* ---------------- Cards: 50% taller, 28-char wrap, 4 lines ---------------- */
+const MAX_LINES = 6, COLS = 24; // wrap at 28 chars, up to 4 lines
+const CARD_W = 2.5;
+const CARD_H = 1.95;            // 50% taller than 1.3
+const SELECT_SCALE = 1.15;
+
+// Carousel + visibility
+const ANGLE_STEP = Math.PI/10, RADIUS = 4.8; // a bit wider ring
+const ARC_LIMIT = Math.PI * 0.60; // ±108° hard cutoff
+const FADE_ARC  = Math.PI * 0.48; // start fading at ±86°
+
+// Pull the selected card toward the camera & draw it last
+const SELECT_PULL = 0.7;
+
+const cardsGroup = new THREE.Group(); scene.add(cardsGroup);
+const cardMeshes = [];
+
+let currentFeedKey = 'Home';
+let currentTweets = feeds[currentFeedKey];
+let selected = 0;
+let carouselAngle = 0;
+
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+function wrapText(str, cols=COLS){
+  const words=str.split(/\s+/); const lines=[]; let line='';
+  for(const w of words){
+    if((line?line.length+1:0)+w.length>cols){ lines.push(line); line=w; if(lines.length>=MAX_LINES) break; }
+    else line += (line?' ':'')+w;
+  }
+  if(lines.length<MAX_LINES && line) lines.push(line);
+  return lines.slice(0,MAX_LINES);
+}
+
+function drawTweetTexture(tw, highlight=false){
+  const W = 256, H = 192; // taller texture
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const ctx=c.getContext('2d'); ctx.imageSmoothingEnabled=false;
+
+  // Background & border
+  ctx.fillStyle = highlight ? '#e6f1ff' : '#121a3a';
+  ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle = highlight ? '#0b0f1c' : '#2a3a7a';
+  ctx.lineWidth = 2; ctx.strokeRect(1,1,W-2,H-2);
+
+  // Header
+  ctx.font = 'bold 20px monospace';
+  ctx.fillStyle = highlight ? '#0b0f1c' : '#7aa7ff';
+  const headerLeft = `${tw.handle}`;
+  const headerRight = `${tw.age}  ↻${tw.rt} ♥${tw.fav}`;
+  ctx.fillText(headerLeft, 8, 20);
+  const rW = ctx.measureText(headerRight).width;
+  ctx.fillText(headerRight, W-8-rW, 20);
+
+  // Body (28 cols × up to 4 lines)
+  ctx.font = '18px monospace';
+  ctx.fillStyle = highlight ? '#0b0f1c' : '#cfe0ff';
+  const body = wrapText(tw.text, COLS);
+  const lineH = 18;
+  let y = 48;
+  body.forEach((line,i)=> ctx.fillText(line, 8, y + i*lineH));
+
+  // Footer
+  ctx.font = '16px monospace';
+  ctx.fillStyle = highlight ? '#0b0f1c' : '#9bb0c9';
+  ctx.fillText('X: Open   Z: Back', 8, H-10);
+
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.magFilter = THREE.NearestFilter;
+  tex.minFilter = THREE.NearestMipMapNearestFilter;
+  return tex;
+}
+
+function makeCard(tw, i){
+  const tex = drawTweetTexture(tw, i===selected);
+  const geo = new THREE.PlaneGeometry(CARD_W, CARD_H, 1, 1);
+  const mat = new THREE.MeshLambertMaterial({
+    map: tex,
+    transparent: true,   // enable fading
+    opacity: 1.0,
+    depthWrite: false    // helps with transparency sorting
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.userData = { tex, tw, isHi: i===selected };
+  cardsGroup.add(mesh);
+  cardMeshes.push(mesh);
+  return mesh;
+}
+
+function rebuildCards(){
+  while(cardMeshes.length){
+    const m=cardMeshes.pop();
+    m.geometry.dispose(); m.material.map.dispose(); m.material.dispose(); cardsGroup.remove(m);
+  }
+  currentTweets.forEach((tw,i)=> makeCard(tw,i));
+  layoutCards(true, 0.016);
+}
+
+const tmp = new THREE.Vector3();
+const _scaleV = new THREE.Vector3();
+
+/* ---------------- Time-based easing (slower transitions) ---------------- */
+const SPEEDS = {
+  carouselHz: 3,  // wheel settle
+  camPosHz:   3,  // camera position settle
+  camLookHz:  6,  // look-at settle
+  scaleHz:    10  // card highlight scale settle
+};
+const WOBBLE = { timeline: 0.0018, detail: 0.0006 };
+let _lastT = performance.now();
+function ease(rateHz, dt){ return 1 - Math.exp(-rateHz * dt); }
+
+function layoutCards(immediate=false, dt=0.016){
+  const targetAngle = selected * ANGLE_STEP;
+  if(immediate) carouselAngle = targetAngle;
+
+  const N = cardMeshes.length;
+  const aScale = ease(SPEEDS.scaleHz, dt);
+
+  for(let i=0;i<N;i++){
+    const mesh = cardMeshes[i];
+    const a = (i*ANGLE_STEP - carouselAngle);
+
+    // Fade near the edge, then hide past limit
+    const absA = Math.abs(a);
+    let alpha = 1.0;
+    if (absA > FADE_ARC) {
+      const t = (absA - FADE_ARC) / (ARC_LIMIT - FADE_ARC);
+      alpha = Math.max(0, 1 - t);
+    }
+    const inFront = absA <= ARC_LIMIT;
+    mesh.visible = inFront;
+    if(!inFront) continue;
+
+    const x = Math.sin(a)*RADIUS;
+    const z = Math.cos(a)*RADIUS - 0.4;
+    const y = 0.25*Math.sin(a*2);
+    mesh.position.set(x,y,z);
+
+    // Billboard toward camera
+    tmp.copy(camera.position);
+    mesh.lookAt(tmp);
+
+    // Pull selected card forward & draw last
+    if (i === selected) {
+      const toCam = new THREE.Vector3().subVectors(camera.position, mesh.position).normalize();
+      mesh.position.addScaledVector(toCam, SELECT_PULL);
+      mesh.renderOrder = 9999;
+      mesh.material.opacity = 1.0; // never fade the selected card
+    } else {
+      mesh.renderOrder = 0;
+      mesh.material.opacity = alpha;
+    }
+
+    // Smooth highlight scale
+    const targetS = (i===selected) ? SELECT_SCALE : 1.0;
+    _scaleV.set(targetS, targetS, 1);
+    mesh.scale.lerp(_scaleV, aScale);
+
+    // Swap highlight texture lazily
+    const wantHi = (i===selected);
+    if(wantHi !== mesh.userData.isHi){
+      mesh.userData.isHi = wantHi;
+      const newTex = drawTweetTexture(mesh.userData.tw, wantHi);
+      mesh.material.map.dispose();
+      mesh.material.map = newTex;
+      mesh.material.needsUpdate = true;
+    }
+  }
+  if(cardMeshes[selected]) cardMeshes[selected].position.y += 0.08;
+}
+
+/* ---------------- HUD / Menus ---------------- */
+const feedNameEl=document.getElementById('feedName');
+const menuBox=document.getElementById('menuBox');
+const feedsBox=document.getElementById('feedsBox');
+let uiMode='timeline', menuSel=0, feedsSel=0;
+
+function openMenu(){ uiMode='menu'; menuSel=0; menuBox.style.display='block'; updateMenuSel(); }
+function closeMenu(){ menuBox.style.display='none'; if(uiMode==='menu') uiMode='timeline'; }
+function updateMenuSel(){ [...menuBox.querySelectorAll('.row')].forEach((el,i)=> el.classList.toggle('sel', i===menuSel)); }
+function actMenu(){
+  const label = menuBox.querySelectorAll('.row')[menuSel].textContent.trim();
+  if(label==='Refresh'){ fakeRefresh(); closeMenu(); }
+  if(label==='Feeds…'){ openFeeds(); }
+  if(label==='About'){ alert('N64-styled Twit-Viewer (browser demo)\nTaller cards + bigger fonts + 28-char wrapping.\nTransitions slowed; zoomed-out camera higher/farther.'); closeMenu(); }
+}
+function openFeeds(){ uiMode='feeds'; feedsSel = Object.keys(feeds).indexOf(currentFeedKey); feedsBox.style.display='block'; updateFeedsSel(); }
+function closeFeeds(){ feedsBox.style.display='none'; if(uiMode==='feeds') uiMode='timeline'; }
+function updateFeedsSel(){ [...feedsBox.querySelectorAll('.row')].forEach((el,i)=> el.classList.toggle('sel', i===feedsSel)); }
+function applyFeed(){
+  const keys=Object.keys(feeds);
+  currentFeedKey = keys[feedsSel];
+  currentTweets = feeds[currentFeedKey];
+  feedNameEl.textContent = currentFeedKey;
+  selected = 0; rebuildCards(); closeFeeds();
+}
+
+/* ---------------- Refresh ---------------- */
+function fakeRefresh(){
+  currentTweets.forEach(tw=>{
+    const jitter=(n,max)=> clamp(n + (Math.random()<.5?-1:1)*Math.floor(Math.random()*max),0,999);
+    tw.rt = jitter(tw.rt,3); tw.fav = jitter(tw.fav,5);
+  });
+  rebuildCards();
+}
+
+/* ---------------- Input ---------------- */
+window.addEventListener('keydown', (e)=>{
+  const k=e.key, isA=(k==='x'||k==='X'||k==='a'||k==='A'), isB=(k==='z'||k==='Z'||k==='b'||k==='B'||k==='Escape');
+  if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(k)) e.preventDefault();
+
+  if(uiMode==='timeline'){
+    if(k==='ArrowUp'||k==='ArrowLeft'){ selected = clamp(selected-1,0,currentTweets.length-1); }
+    else if(k==='ArrowDown'||k==='ArrowRight'){ selected = clamp(selected+1,0,currentTweets.length-1); }
+    else if(k==='q'||k==='Q'){ selected = clamp(selected-5,0,currentTweets.length-1); }
+    else if(k==='e'||k==='E'){ selected = clamp(selected+5,0,currentTweets.length-1); }
+    else if(isA){ openDetail(); }
+    else if(k==='Enter'){ openMenu(); }
+    else if(k==='Shift'){
+      const keys=Object.keys(feeds);
+      const idx=(keys.indexOf(currentFeedKey)+1)%keys.length;
+      currentFeedKey=keys[idx]; currentTweets=feeds[currentFeedKey]; feedNameEl.textContent=currentFeedKey; selected=0; rebuildCards();
+    }
+  } else if(uiMode==='detail'){
+    if(k==='ArrowLeft'){ selected = clamp(selected-1,0,currentTweets.length-1); }
+    else if(k==='ArrowRight'){ selected = clamp(selected+1,0,currentTweets.length-1); }
+    else if(isB){ closeDetail(); }
+  } else if(uiMode==='menu'){
+    if(k==='ArrowUp'){ menuSel = clamp(menuSel-1,0,2); updateMenuSel(); }
+    else if(k==='ArrowDown'){ menuSel = clamp(menuSel+1,0,2); updateMenuSel(); }
+    else if(isA){ actMenu(); }
+    else if(isB){ closeMenu(); }
+  } else if(uiMode==='feeds'){
+    const max=Object.keys(feeds).length-1;
+    if(k==='ArrowUp'){ feedsSel = clamp(feedsSel-1,0,max); updateFeedsSel(); }
+    else if(k==='ArrowDown'){ feedsSel = clamp(feedsSel+1,0,max); updateFeedsSel(); }
+    else if(isA){ applyFeed(); }
+    else if(isB){ closeFeeds(); }
+  }
+});
+
+/* ---------------- Detail camera targeting (auto-fit width/height) ---------------- */
+function getSelectedCard(){ return cardMeshes[selected]; }
+function openDetail(){ uiMode='detail'; }
+function closeDetail(){ uiMode='timeline'; camPosTarget.copy(DEFAULT_POS); camLookTarget.copy(DEFAULT_LOOK); }
+
+/* ---------------- Animate (time-based easing) ---------------- */
+const fpsEl=document.getElementById('fps'); let lastFpsT=performance.now(), frames=0;
+
+function animate(t){
+  requestAnimationFrame(animate);
+
+  const dt = Math.min((t - _lastT)/1000, 0.1); _lastT = t;
+
+  // smooth carousel with dt-aware easing
+  const aCar = ease(SPEEDS.carouselHz, dt);
+  const targetAngle = selected * ANGLE_STEP;
+  carouselAngle += (targetAngle - carouselAngle) * aCar;
+
+  layoutCards(false, dt);
+
+  // choose camera targets
+  if(uiMode==='timeline'){
+    camPosTarget.copy(DEFAULT_POS);
+    camLookTarget.copy(DEFAULT_LOOK);
+  }else if(uiMode==='detail'){
+    const m = getSelectedCard();
+    if(m){
+      const c = m.position;
+
+      // Auto compute distance to fit BOTH width & height with some margin
+      const vFov = THREE.MathUtils.degToRad(camera.fov);
+      const hFov = 2 * Math.atan(Math.tan(vFov/2) * camera.aspect);
+      const scale = SELECT_SCALE;
+      const halfW = (CARD_W * scale) / 2;
+      const halfH = (CARD_H * scale) / 2;
+      const distW = halfW / Math.tan(hFov/2);
+      const distH = halfH / Math.tan(vFov/2);
+      const MARGIN = 1.12;
+      const d = Math.max(distW, distH) * MARGIN;
+
+      const up = 0.02;
+      camPosTarget.set(c.x, c.y + up, c.z + d);
+      camLookTarget.set(c.x, c.y + up, c.z);
+    }
+  }
+
+  // gentle wobble (reduced lateral effect at farther distance)
+  const wobAmp = uiMode==='detail' ? WOBBLE.detail : WOBBLE.timeline;
+  const wob = (Math.sin(t*0.0013)+Math.cos(t*0.0019))*wobAmp;
+  camPosTarget.x += wob*18;
+
+  // dt-aware camera easing
+  camera.position.lerp(camPosTarget, ease(SPEEDS.camPosHz, dt));
+  camLook.lerp(camLookTarget, ease(SPEEDS.camLookHz, dt));
+  camera.lookAt(camLook);
+
+  renderer.render(scene, camera);
+
+  frames++; if(t-lastFpsT>500){ fpsEl.textContent='FPS: '+Math.round(frames*1000/(t-lastFpsT)); frames=0; lastFpsT=t; }
+}
+
+/* ---------------- Boot ---------------- */
+function boot(){ rebuildCards(); animate(0); }
+boot();
+</script>
+</body>
+</html>
