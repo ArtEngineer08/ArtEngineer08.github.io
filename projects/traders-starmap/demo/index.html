@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Trader's Starmap for Endless Sky (v2)</title>
+<style>
+  :root{
+    --bg0:#082a2f; --bg1:#0b3237;
+    --panel:rgba(6,28,32,.88);
+    --grid:rgba(255,255,255,.05);
+    --ink:#D6EFEA; --muted:rgba(214,239,234,.65);
+    --teal:#58D8C8; --teal-2:#2BB6A8; --teal-3:#18998E;
+    --orange:#FF8E3C; --red:#ff6450; --dark:#273a3f;
+    --shadow:0 0 0 1px rgba(255,255,255,.06) inset, 0 10px 30px rgba(0,0,0,.3);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:radial-gradient(1200px 700px at 70% 30%, #0e3a3f 0, var(--bg0) 70%) fixed;}
+  body{color:var(--ink);font:500 14px/1.4 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Arial;overflow:hidden;}
+  .grid{position:fixed;inset:0;pointer-events:none;opacity:.35;
+        background:repeating-linear-gradient(0deg,transparent 0,transparent 39px,var(--grid) 40px),
+                   repeating-linear-gradient(90deg,transparent 0,transparent 39px,var(--grid) 40px);
+        mix-blend-mode:soft-light;}
+  .wrap{display:grid;grid-template-columns:320px 1fr;height:100%;gap:18px;padding:18px;position:relative;z-index:0;}
+
+  /* LEFT OVERLAY */
+  .panel{background:var(--panel);border-radius:14px;box-shadow:var(--shadow);
+         padding:16px 14px;display:grid;grid-template-columns:repeat(2,1fr);
+         grid-auto-rows:minmax(66px,auto);gap:10px;position:relative;z-index:10;overflow:visible}
+  .panel::before{content:"SYSTEM PROFILE";position:absolute;left:14px;top:10px;
+                 letter-spacing:.18em;font-size:11px;color:var(--muted)}
+  .badge{position:relative;background:rgba(255,255,255,.02);border-radius:10px;
+         padding:10px;display:flex;align-items:center;justify-content:center;
+         outline:1px solid rgba(255,255,255,.05);transition:transform .08s ease,outline-color .15s ease,background-color .15s ease;
+         z-index:20; overflow:visible}
+  .badge > :not(.label){ transform: translateY(-6px); } /* lift icons slightly */
+  .badge:hover{transform:translateY(-1px);outline-color:rgba(255,255,255,.12);background:rgba(255,255,255,.035); z-index:100000}
+  .badge .label{position:absolute;left:10px;bottom:6px;font-size:10px;letter-spacing:.15em;color:var(--muted)}
+
+  /* Tooltips */
+  .badge[data-tip]:hover::after{
+    content: attr(data-tip);
+    position:absolute; top:50%; left:calc(100% + 12px); transform:translateY(-50%);
+    max-width:820px; white-space:nowrap;
+    background:rgba(10,15,16,.98); color:var(--ink);
+    border-radius:10px; padding:12px 14px; font-size:24px; line-height:1;
+    box-shadow:0 8px 28px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08) inset;
+    pointer-events:none; z-index:1000000;
+  }
+  .badge[data-tip]:hover::before{
+    content:""; position:absolute; top:50%; left:100%; transform:translateY(-50%);
+    border:9px solid transparent; border-left-color:rgba(10,15,16,.98); z-index:1000000;
+  }
+
+  .ico{width:54px;height:54px;display:block}
+  .meter{width:100%;height:8px;background:rgba(255,255,255,.05);border-radius:6px;overflow:hidden}
+  .meter > i{display:block;height:8px;width:40%}
+
+  /* Security donut */
+  .donut{--a1:0deg; width:54px;height:54px;border-radius:50%;
+    background:conic-gradient(var(--orange) var(--a1), var(--teal) 0 360deg);
+    -webkit-mask:radial-gradient(transparent 38%, #000 39%); mask:radial-gradient(transparent 38%, #000 39%);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)}
+
+  /* Asteroids donut (3 segments) */
+  .donut3{--s1:0deg; --s2:0deg; --s3:0deg;
+    width:54px;height:54px;border-radius:50%;
+    background:conic-gradient(
+      var(--ore1,#FF8E3C) 0 var(--s1),          /* orange first */
+      var(--ore2,#58D8C8) var(--s1) var(--s2),  /* teal second */
+      var(--ore3,#B9C9C7) var(--s2) var(--s3),  /* light gray third */
+      var(--dark) var(--s3) 360deg              /* dark gray empty */
+    );
+    -webkit-mask:radial-gradient(transparent 38%, #000 39%); mask:radial-gradient(transparent 38%, #000 39%);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.1)
+  }
+
+  .landables{display:flex;gap:8px;align-items:center}
+  .landables .port{width:13px;height:13px;border-radius:50%;background:var(--orange);opacity:.95}
+  .landables .outpost{width:13px;height:13px;border-radius:50%;background:transparent;outline:2px solid var(--ink);opacity:.75}
+
+  .map{position:relative;border-radius:14px;box-shadow:var(--shadow);overflow:hidden;
+       background:linear-gradient(180deg,var(--bg1),var(--bg0)); z-index:1}
+  .map svg{width:100%;height:100%;cursor:pointer}
+  .edge{stroke:rgba(214,239,234,.22);stroke-width:2.6}
+  .star{fill:rgba(214,239,234,.85)}
+  .star.dim{fill:rgba(214,239,234,.55)}
+  .current{fill:var(--ink); filter: drop-shadow(0 0 8px var(--teal)); } /* glow for player system */
+  .selected{fill:none;stroke:var(--teal);stroke-width:4;filter:drop-shadow(0 0 7px var(--teal))}
+  .hoverSel{fill:none;stroke:rgba(214,239,234,.35);stroke-width:3}
+  .hint{position:absolute;right:14px;bottom:12px;color:var(--muted);font-size:12px;letter-spacing:.08em;
+        background:rgba(6,28,32,.6);padding:6px 8px;border-radius:6px;outline:1px solid rgba(255,255,255,.05);z-index:2}
+
+  /* Wider trade graph */
+  #b-trade .ico{width:120px;height:54px}
+  #b-bank .ico{width:90px;height:54px}
+</style>
+</head>
+<body>
+<div class="grid"></div>
+<div class="wrap">
+  <!-- LEFT BADGE PANEL (2 × 8) -->
+  <section class="panel">
+
+    <!-- 1 SECURITY MIX -->
+    <div class="badge" id="b-security" data-tip="">
+      <div class="donut" id="donut"></div>
+      <span class="label">SECURITY</span>
+    </div>
+
+    <!-- 2 PORTS -->
+    <div class="badge" id="b-landables" data-tip="">
+      <div class="landables" id="landables"></div>
+      <span class="label">PORTS</span>
+    </div>
+
+    <!-- 3 RELATIONSHIP -->
+    <div class="badge" id="b-relationship" data-tip="">
+      <svg class="ico" viewBox="0 0 64 64" aria-hidden="true">
+        <!-- hate ring -->
+        <circle id="relRing" cx="32" cy="32" r="26" fill="none" stroke="var(--orange)" stroke-width="4" style="display:none"/>
+        <!-- heart (love) -->
+        <path id="relHeart" d="M32 46s18-10 18-22c0-10-12-12-18-4-6-8-18-6-18 4 0 12 18 22 18 22z"
+              fill="var(--teal)" style="display:none"/>
+        <!-- like circle -->
+        <circle id="relCircle" cx="32" cy="32" r="10" fill="var(--teal)" style="display:none"/>
+        <!-- neutral dash -->
+        <rect id="relDash" x="22" y="30" width="20" height="4" rx="2" fill="rgba(214,239,234,.45)" style="display:none"/>
+        <!-- dislike/hate bang -->
+        <text id="relBang" x="32" y="40" text-anchor="middle" font-size="30"
+              font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+              fill="var(--orange)" style="display:none">!</text>
+      </svg>
+      <span class="label">RELATIONSHIP</span>
+    </div>
+
+    <!-- 4 OUTFITTER TIER -->
+    <div class="badge" id="b-outfitter" data-tip="">
+      <div class="meter" style="height:36px;border-radius:6px;">
+        <i id="outfBar" style="height:36px;"></i>
+      </div>
+      <span class="label">OUTFITTER</span>
+    </div>
+
+    <!-- 5 MISSIONS -->
+    <div class="badge" id="b-missions" data-tip="">
+      <div style="display:flex;gap:8px;">
+        <span class="dot" style="width:12px;height:12px;border-radius:6px;background:var(--muted);display:block"></span>
+        <span class="dot" style="width:12px;height:12px;border-radius:6px;background:var(--muted);display:block"></span>
+        <span class="dot" style="width:12px;height:12px;border-radius:6px;background:var(--muted);display:block"></span>
+      </div>
+      <span class="label">MISSIONS</span>
+    </div>
+
+    <!-- 6 SHIPYARD TIER -->
+    <div class="badge" id="b-shipyard" data-tip="">
+      <div class="meter" style="height:36px;border-radius:6px;">
+        <i id="shipyardBar" style="height:36px;"></i>
+      </div>
+      <span class="label">SHIPYARD</span>
+    </div>
+
+    <!-- 7 ENFORCEMENT -->
+    <div class="badge" id="b-contraband" data-tip="">
+      <svg class="ico" viewBox="0 0 64 64">
+        <!-- 25% larger diamond ring -->
+        <polygon id="enfDiamond" points="32,2 62,32 32,62 2,32" fill="none" stroke="var(--orange)" stroke-width="4" style="display:none"/>
+        <circle id="enfBase" cx="32" cy="32" r="12" fill="none" stroke="rgba(214,239,234,.35)" stroke-width="4"/>
+      </svg>
+      <span class="label">ENFORCEMENT</span>
+    </div>
+
+    <!-- 8 STELLAR ACTIVITY -->
+    <div class="badge" id="b-emission" data-tip="">
+      <svg class="ico" id="stellarIcon" viewBox="0 0 64 64">
+        <circle id="sunCore" cx="32" cy="32" r="8" fill="none" stroke="rgba(214,239,234,.35)" stroke-width="3"/>
+        <g id="sunRays"></g>
+        <text id="sunBang" x="32" y="39" text-anchor="middle" font-size="20"
+              font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+              fill="var(--dark)" style="display:none">!</text>
+      </svg>
+      <span class="label">STELLAR ACTIVITY</span>
+    </div>
+
+    <!-- 9 INDUSTRY -->
+    <div class="badge" id="b-industry" data-tip="">
+      <svg class="ico" viewBox="0 0 64 64">
+        <rect id="indBase" x="16" y="16" width="32" height="32" rx="4" fill="none" stroke="rgba(214,239,234,.35)" stroke-width="4"/>
+        <g id="indBars" style="display:none">
+          <rect x="22" y="28" width="6" height="14" fill="var(--orange)"/>
+          <rect x="30" y="24" width="6" height="18" fill="var(--orange)"/>
+          <rect x="38" y="20" width="6" height="22" fill="var(--orange)"/>
+        </g>
+      </svg>
+      <span class="label">INDUSTRY</span>
+    </div>
+
+    <!-- 10 FACTION -->
+    <div class="badge" id="b-faction" data-tip="">
+      <svg class="ico" viewBox="0 0 64 64">
+        <path id="factionShield" d="M32 8 L52 18 V34 C52 46 43 54 32 58 C21 54 12 46 12 34 V18 Z" fill="var(--teal)"/>
+      </svg>
+      <span class="label">FACTION</span>
+    </div>
+
+    <!-- 11 HAZARD -->
+    <div class="badge" id="b-hazard" data-tip="">
+      <svg class="ico" viewBox="0 0 64 64">
+        <text id="hazBang" x="32" y="40" text-anchor="middle" font-size="30"
+              font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace"
+              fill="rgba(214,239,234,.35)">!</text>
+        <!-- triangle moved up by 10px -->
+        <polygon id="hazTri" points="32,0 8,44 56,44" fill="none" stroke="var(--orange)" stroke-width="4" style="display:none"/>
+      </svg>
+      <span class="label">HAZARD</span>
+    </div>
+
+    <!-- 12 BANK -->
+    <div class="badge" id="b-bank" data-tip="">
+      <svg class="ico" viewBox="0 0 90 54">
+        <rect x="5" y="8" width="80" height="38" rx="8" fill="rgba(255,255,255,.15)" stroke="rgba(255,255,255,.25)" />
+        <text id="bankDollar" x="45" y="40" text-anchor="middle" font-size="34"
+              font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-weight="800"
+              fill="var(--orange)">$</text>
+      </svg>
+      <span class="label">BANK</span>
+    </div>
+
+    <!-- 13 TRADE -->
+    <div class="badge" id="b-trade" data-tip="">
+      <svg class="ico" id="tradeGraph" viewBox="0 0 120 54">
+        <polyline id="tradeLine" fill="none" stroke="var(--teal)" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" points=""/>
+        <g id="tradeDots" fill="var(--teal)"></g>
+      </svg>
+      <span class="label">TRADE</span>
+    </div>
+
+    <!-- 14 ASTEROIDS -->
+    <div class="badge" id="b-ore" data-tip="">
+      <div class="donut3" id="oreDonut"></div>
+      <span class="label">ASTEROIDS</span>
+    </div>
+
+    <!-- 15 RANGE -->
+    <div class="badge" id="b-range" data-tip="">
+      <div class="meter"><i id="rangeBar"></i></div>
+      <span class="label">RANGE</span>
+    </div>
+
+    <!-- 16 JUMPS -->
+    <div class="badge" id="b-jumps" data-tip="">
+      <div class="meter"><i id="jumpsBar"></i></div>
+      <span class="label">JUMPS</span>
+    </div>
+
+  </section>
+
+  <!-- STAR MAP -->
+  <section class="map">
+    <svg id="svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice"></svg>
+    <div class="hint">Mock up of a starmap for a spacefaring trade captain in the game Endless Sky</div>
+  </section>
+</div>
+
+<script>
+(function(){
+  const svg = document.getElementById('svg');
+  const W=1600,H=900, COUNT=120, stars=[], edges=[];
+  const rnd=(a=1)=>Math.random()*a, irnd=a=>Math.floor(Math.random()*a);
+
+  // Stars
+  for(let i=0;i<COUNT;i++) stars.push({id:i,x:60+rnd(W-120),y:60+rnd(H-120)});
+  // k-NN edges
+  const K=3;
+  for(let i=0;i<COUNT;i++){
+    const s=stars[i];
+    const ds=stars.map(t=>({t,d:(t.x-s.x)**2+(t.y-s.y)**2})).filter(o=>o.t!==s).sort((a,b)=>a.d-b.d).slice(0,K);
+    ds.forEach(o=>edges.push({a:s,b:o.t}));
+  }
+  // draw edges
+  edges.forEach(e=>{
+    const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+    l.setAttribute('x1',e.a.x); l.setAttribute('y1',e.a.y);
+    l.setAttribute('x2',e.b.x); l.setAttribute('y2',e.b.y);
+    l.setAttribute('class','edge'); svg.appendChild(l);
+  });
+
+  const gStars=document.createElementNS('http://www.w3.org/2000/svg','g'); svg.appendChild(gStars);
+
+  // Player/current system chosen at load
+  let current=stars[irnd(COUNT)];
+  let selected=stars[(current.id+5)%COUNT];
+
+  // star nodes
+  stars.forEach(s=>{
+    const g=document.createElementNS('http://www.w3.org/2000/svg','g'); g.setAttribute('data-id',s.id);
+
+    const dot=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    dot.setAttribute('cx',s.x); dot.setAttribute('cy',s.y); dot.setAttribute('r',5.25);
+    dot.setAttribute('class','star dim'); g.appendChild(dot);
+
+    const ring=document.createElementNS('http://www.w3.org/2000/svg','circle');
+    ring.setAttribute('cx',s.x); ring.setAttribute('cy',s.y); ring.setAttribute('r',16);
+    ring.setAttribute('class','selected'); ring.style.display='none'; g.appendChild(ring);
+
+    gStars.appendChild(g);
+  });
+
+  // hover ring preview
+  const hoverRing=document.createElementNS('http://www.w3.org/2000/svg','circle');
+  hoverRing.setAttribute('r',16);
+  hoverRing.setAttribute('class','hoverSel');
+  hoverRing.style.display='none';
+  svg.appendChild(hoverRing);
+
+  const groups=[...gStars.children];
+  function paint(){
+    groups.forEach(g=>{
+      const id=+g.getAttribute('data-id'); const [dot, ring]=g.children;
+      // reset baseline radius/class
+      dot.setAttribute('r',5.25);
+      dot.setAttribute('class','star dim'); ring.style.display='none';
+      if(id===current.id){ dot.setAttribute('class','star current'); dot.setAttribute('r',7.8); } // bigger + glow
+      if(id===selected.id){ ring.style.display='block'; }
+    });
+  }
+  paint();
+
+  // helpers
+  function clientToSvgPoint(evt){
+    const pt = svg.createSVGPoint();
+    pt.x = evt.clientX; pt.y = evt.clientY;
+    const m = svg.getScreenCTM().inverse();
+    return pt.matrixTransform(m);
+  }
+  const SELECT_RADIUS = 26;
+
+  // hover preview
+  svg.addEventListener('mousemove', ev=>{
+    const p = clientToSvgPoint(ev);
+    let best=null, bestD=SELECT_RADIUS*SELECT_RADIUS;
+    for(const s of stars){
+      const d=(s.x-p.x)**2 + (s.y-p.y)**2;
+      if(d<bestD){best=s; bestD=d;}
+    }
+    if(best){
+      hoverRing.style.display='block';
+      hoverRing.setAttribute('cx', best.x);
+      hoverRing.setAttribute('cy', best.y);
+    }else{
+      hoverRing.style.display='none';
+    }
+  });
+
+  // click-near select
+  svg.addEventListener('click', ev=>{
+    const p = clientToSvgPoint(ev);
+    let best=null, bestD=SELECT_RADIUS*SELECT_RADIUS;
+    for(const s of stars){
+      const d=(s.x-p.x)**2 + (s.y-p.y)**2;
+      if(d<bestD){best=s; bestD=d;}
+    }
+    if(best){
+      selected=best; paint(); randomizeBadges();
+    }
+  });
+
+  /* ---------- BADGES ---------- */
+  const setTip=(id,text)=>document.getElementById(id).setAttribute('data-tip',text);
+
+  function randomizeBadges(){
+    // SECURITY donut
+    const pirate=Math.round(Math.random()*60), law=100-pirate;
+    const donut=document.getElementById('donut');
+    donut.style.setProperty('--a1', (pirate*3.6)+'deg');
+    setTip('b-security', `Security Mix — Lawful ${law}% / Pirate ${pirate}%`);
+
+    // PORTS (ports=orange filled; outposts=hollow)
+    const ports=irnd(3)+(Math.random()<.6?1:0), outposts=irnd(4);
+    const land=document.getElementById('landables'); land.innerHTML='';
+    for(let i=0;i<ports;i++){const e=document.createElement('div'); e.className='port'; land.appendChild(e);}
+    for(let i=0;i<outposts;i++){const e=document.createElement('div'); e.className='outpost'; land.appendChild(e);}
+    setTip('b-landables', `Ports ${ports} · Outposts ${outposts}`);
+
+    // RELATIONSHIP: 0 love, 1 like, 2 neutral, 3 dislike, 4 hate
+    const rel=irnd(5);
+    const heart=document.getElementById('relHeart');
+    const circle=document.getElementById('relCircle');
+    const dash=document.getElementById('relDash');
+    const bang=document.getElementById('relBang');
+    const ring=document.getElementById('relRing');
+    [heart,circle,dash,bang,ring].forEach(el=>el.style.display='none');
+    let relText='Neutral';
+    if(rel===0){ heart.style.display='block'; relText='Love'; }
+    else if(rel===1){ circle.style.display='block'; relText='Like'; }
+    else if(rel===2){ dash.style.display='block'; relText='Neutral'; }
+    else if(rel===3){ bang.style.display='block'; relText='Dislike'; }
+    else { bang.style.display='block'; ring.style.display='block'; relText='Hate'; }
+    setTip('b-relationship', `Relationship — ${relText}`);
+
+    // OUTFITTER TIER (0..5) — tiers 3–5 orange
+    const outf=irnd(6);
+    const ob=document.getElementById('outfBar');
+    ob.style.width=(outf*20)+'%';
+    if(outf===0){ ob.style.background='rgba(214,239,234,.25)'; }
+    else if(outf<=2){ ob.style.background='linear-gradient(90deg,var(--teal-2),var(--teal))'; }
+    else { ob.style.background='linear-gradient(90deg,var(--orange),#ffac6c)'; }
+    setTip('b-outfitter', `Outfitter Tier: ${outf}`);
+
+    // MISSIONS (orange fill)
+    const m=irnd(3);
+    document.querySelectorAll('#b-missions .dot').forEach((d,i)=>d.style.background=i<=m?'var(--orange)':'var(--muted)');
+    setTip('b-missions', `Mission Traffic — ${['Low','Medium','High'][m]}`);
+
+    // SHIPYARD TIER (0..5) — tiers 3–5 orange
+    const yard=irnd(6);
+    const yb=document.getElementById('shipyardBar'); yb.style.width=(yard*20)+'%';
+    if(yard===0){ yb.style.background='rgba(214,239,234,.25)'; }
+    else if(yard<=2){ yb.style.background='linear-gradient(90deg,var(--teal-2),var(--teal))'; }
+    else { yb.style.background='linear-gradient(90deg,var(--orange),#ffac6c)'; }
+    setTip('b-shipyard', `Shipyard Tier: ${yard}`);
+
+    // ENFORCEMENT tiers: 0 none, 1 moderate, 2 high (diamond ring around circle on high)
+    const enf=irnd(3);
+    const enfBase=document.getElementById('enfBase');
+    const enfDiamond=document.getElementById('enfDiamond');
+    if(enf===0){
+      enfBase.setAttribute('fill','none'); enfBase.setAttribute('stroke','rgba(214,239,234,.35)');
+      enfDiamond.style.display='none';
+      setTip('b-contraband','Enforcement — None');
+    }else if(enf===1){
+      enfBase.setAttribute('fill','var(--orange)'); enfBase.setAttribute('stroke','var(--orange)');
+      enfDiamond.style.display='none';
+      setTip('b-contraband','Enforcement — Moderate');
+    }else{
+      enfBase.setAttribute('fill','var(--orange)'); enfBase.setAttribute('stroke','var(--orange)');
+      enfDiamond.style.display='block';
+      setTip('b-contraband','Enforcement — High');
+    }
+
+    // STELLAR ACTIVITY: 0 none,1 low,2 med,3 high,4 extreme
+    const st=irnd(5);
+    const sunCore=document.getElementById('sunCore');
+    const sunRays=document.getElementById('sunRays'); sunRays.innerHTML='';
+    const sunBang=document.getElementById('sunBang'); sunBang.style.display='none';
+    const setCore=(r, filled)=>{
+      sunCore.setAttribute('r', r);
+      if(filled){ sunCore.setAttribute('fill','var(--teal)'); sunCore.setAttribute('stroke','var(--teal)'); }
+      else { sunCore.setAttribute('fill','none'); sunCore.setAttribute('stroke','rgba(214,239,234,.35)'); }
+    };
+    const addRays=(count,thick)=>{
+      const r1=16, r2=24, cx=32, cy=32;
+      for(let i=0;i<count;i++){
+        const a=(i/count)*Math.PI*2;
+        const x1=cx+r1*Math.cos(a), y1=cy+r1*Math.sin(a);
+        const x2=cx+r2*Math.cos(a), y2=cy+r2*Math.sin(a);
+        const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+        line.setAttribute('x1',x1); line.setAttribute('y1',y1);
+        line.setAttribute('x2',x2); line.setAttribute('y2',y2);
+        line.setAttribute('stroke','var(--orange)');
+        line.setAttribute('stroke-width', thick?3:1.5);
+        sunRays.appendChild(line);
+      }
+    };
+    if(st===0){ setCore(8,false); }
+    if(st===1){ setCore(8,true); }
+    if(st===2){ setCore(9,true); addRays(8,false); }
+    if(st===3){ setCore(12,true); addRays(12,true); }
+    if(st===4){ setCore(12,true); addRays(12,true); sunBang.style.display='block'; } // ! is dark for contrast
+    setTip('b-emission', ['Stellar Activity — None','Stellar Activity — Low','Stellar Activity — Medium','Stellar Activity — High','Stellar Activity — Extreme'][st]);
+
+    // INDUSTRY tiers (moderate = teal)
+    const indT=irnd(3);
+    const indBase=document.getElementById('indBase');
+    const indBars=document.getElementById('indBars');
+    if(indT===0){
+      indBase.setAttribute('fill','none'); indBase.setAttribute('stroke','rgba(214,239,234,.35)'); indBars.style.display='none';
+      setTip('b-industry','Industry — None');
+    }else if(indT===1){
+      indBase.setAttribute('fill','var(--teal)'); indBase.setAttribute('stroke','var(--teal)'); indBars.style.display='none';
+      setTip('b-industry','Industry — Moderate');
+    }else{
+      indBase.setAttribute('fill','var(--orange)'); indBase.setAttribute('stroke','var(--orange)'); indBars.style.display='block';
+      setTip('b-industry','Industry — High');
+    }
+
+    // FACTION & stance
+    const factions=['Republic','Syndicate','Free Worlds','Merchant Guild','Pirates','Deep','Coalition','Remnant'];
+    const stanceLevels=['Friendly','Neutral','Hostile'];
+    const f=factions[irnd(factions.length)], stance=stanceLevels[irnd(3)];
+    const shield=document.getElementById('factionShield');
+    shield.setAttribute('fill', stance==='Hostile' ? 'var(--orange)' : (stance==='Friendly' ? 'var(--teal)' : 'rgba(214,239,234,.6)'));
+    setTip('b-faction', `Faction — ${f} · ${stance}`);
+
+    // HAZARD tiers
+    const hz=irnd(3);
+    const hazBang=document.getElementById('hazBang');
+    const hazTri=document.getElementById('hazTri');
+    if(hz===0){
+      hazBang.setAttribute('fill','rgba(214,239,234,.35)'); hazTri.style.display='none';
+      setTip('b-hazard','Transit Hazard — None');
+    }else if(hz===1){
+      hazBang.setAttribute('fill','var(--orange)'); hazTri.style.display='none';
+      setTip('b-hazard','Transit Hazard — Moderate');
+    }else{
+      hazBang.setAttribute('fill','var(--orange)'); hazTri.style.display='block';
+      setTip('b-hazard','Transit Hazard — High');
+    }
+
+    // BANK ($ orange when available)
+    const bankOn = Math.random() > .35;
+    document.getElementById('bankDollar').setAttribute('fill', bankOn ? 'var(--orange)' : 'rgba(214,239,234,.25)');
+    setTip('b-bank', bankOn ? 'Bank — Available' : 'Bank — None');
+
+    // TRADE graph (10 points, 5 levels)
+    const levelsArr = Array.from({length:10}, ()=> irnd(5)+1);
+    const padX=6, padY=6, w=120-padX*2, h=54-padY*2;
+    const stepX = w/(levelsArr.length-1);
+    const yFor = lvl => padY + (5-lvl)*(h/4);
+    const pts = levelsArr.map((lvl,i)=> `${padX + i*stepX},${yFor(lvl)}`).join(' ');
+    const poly = document.getElementById('tradeLine');
+    poly.setAttribute('points', pts);
+    const dots = document.getElementById('tradeDots'); dots.innerHTML='';
+    levelsArr.forEach((lvl,i)=>{
+      const c = document.createElementNS('http://www.w3.org/2000/svg','circle');
+      c.setAttribute('cx', padX + i*stepX); c.setAttribute('cy', yFor(lvl));
+      c.setAttribute('r', 2.5); dots.appendChild(c);
+    });
+    setTip('b-trade', 'Trade — Price indices (10 commodities)');
+
+    // ASTEROIDS donut
+    const oreSets=[[],['Silicates'],['Iron','Nickel'],['Ice','Carbon','Iron'],['Platinum','Rare Earths','Nickel']];
+    const pick = oreSets[irnd(oreSets.length)];
+    const total = pick.length ? (irnd(51)+35) : 0;   // 0 or 35–85% overall fill
+    const totDeg = Math.max(0, Math.min(100, total)) * 3.6;
+    const segs = pick.length ? pick.map(()=> Math.random()) : [];
+    const sum = segs.reduce((a,b)=>a+b,0) || 1;
+    const proportions = segs.map(v=> v/sum);
+    let a1=0,a2=0,a3=0;
+    if(pick.length>=1){ a1 = totDeg * proportions[0]; }
+    if(pick.length>=2){ a2 = a1 + totDeg * proportions[1]; }
+    if(pick.length>=3){ a3 = a2 + totDeg * proportions[2]; }
+    const oreDonut = document.getElementById('oreDonut');
+    oreDonut.style.setProperty('--s1', a1+'deg');
+    oreDonut.style.setProperty('--s2', a2+'deg');
+    oreDonut.style.setProperty('--s3', a3+'deg');
+    oreDonut.style.setProperty('--ore1', '#FF8E3C'); // orange
+    oreDonut.style.setProperty('--ore2', '#58D8C8'); // teal
+    oreDonut.style.setProperty('--ore3', '#B9C9C7'); // light gray
+    setTip('b-ore', pick.length ? `Asteroids — ${pick.join(', ')}` : 'Asteroids — None');
+
+    // RANGE & JUMPS
+    const margin=Math.random();
+    const r=document.getElementById('rangeBar'); r.style.width=(margin*100)+'%';
+    r.style.background = margin>.6 ? 'linear-gradient(90deg,var(--teal-2),var(--teal))' : (margin>.3?'var(--teal-2)':'rgba(214,239,234,.35)');
+    setTip('b-range', `Fuel Margin — ${(margin*100|0)}%`);
+    const jumps=irnd(8)+1;
+    const jb=document.getElementById('jumpsBar'); jb.style.width=(jumps/8*100)+'%';
+    jb.style.background='linear-gradient(90deg, var(--orange), #ffac6c)';
+    setTip('b-jumps', `Estimated Jumps — ${jumps}`);
+  }
+
+  randomizeBadges();
+})();
+</script>
+</body>
+</html>
