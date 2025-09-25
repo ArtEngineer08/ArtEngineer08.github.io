@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Program the Robot</title>
+<style>
+:root{
+  --bg:#0b0f14; --panel-1:#121821; --panel-2:#0e141c;
+  --ink:#eaf2ff; --muted:#9bb0c9;
+  --accent-1:#5dd6ff; --accent-2:#8b5cf6; --accent-green:#38d39f; --accent-red:#f87171;
+  --radius:16px;
+  --shadow-panel:0 10px 30px rgba(0,0,0,.55);
+  --shadow-inner:inset 0 1px 0 rgba(255,255,255,.06), inset 0 -1px 0 rgba(0,0,0,.55), 0 10px 28px rgba(0,0,0,.35);
+  /* RESTORED widths */
+  --colA: 0.5fr;   /* Action */
+  --colB: 0.4fr;   /* x Times */
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;color:var(--ink);
+  font:15px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Inter,"Helvetica Neue",Arial,sans-serif;
+  background:
+    radial-gradient(1400px 900px at 10% -10%, #182130 0%, transparent 60%),
+    radial-gradient(1400px 900px at 110% 110%, #151d29 0%, transparent 60%),
+    var(--bg);
+}
+
+/* App shell */
+.app{
+  max-width:1280px;
+  margin:clamp(12px,4vmin,24px) auto;
+  padding:clamp(12px,2vmin,24px);
+  background:linear-gradient(180deg,var(--panel-1),var(--panel-2));
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:calc(var(--radius) + 6px);
+  box-shadow:var(--shadow-panel);
+}
+.header{ display:grid; grid-template-columns:auto 1fr auto; align-items:center; gap:12px; margin-bottom:10px; }
+h1{
+  margin:0; font-size:22px; letter-spacing:.06em; font-weight:800; text-align:center;
+  background:linear-gradient(90deg,#75d0ff,#8b5cf6);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.sub{ text-align:center; font-size:12px; color:var(--muted); letter-spacing:.2em; text-transform:uppercase }
+.levelRow{ display:flex; align-items:center; justify-content:center; gap:10px; margin-top:6px; }
+.level{
+  font-size:22px; font-weight:900; letter-spacing:.03em;
+  background:linear-gradient(90deg,#5dd6ff,#8b5cf6); -webkit-background-clip:text; background-clip:text; color:transparent;
+}
+.lvlbtn{
+  width:28px; height:28px; border-radius:8px; border:1px solid rgba(255,255,255,.12);
+  background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.18));
+  color:var(--ink); cursor:pointer; box-shadow:var(--shadow-inner); font-weight:900;
+}
+.feats{ text-align:center; margin-top:4px; font-size:12px; color:var(--muted) }
+
+.btn-ghost{
+  appearance:none; border:1px solid rgba(255,255,255,.12); border-radius:12px; cursor:pointer;
+  padding:10px 14px; background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.18));
+  color:var(--ink); box-shadow:var(--shadow-inner); transition:transform .08s, filter .18s, opacity .2s;
+}
+.btn-ghost:hover{ transform:translateY(-1px) }
+
+/* Layout */
+.main{
+  display:grid;
+  grid-template-columns: 280px 0.28fr 2.4fr; /* palette wider; board gets more room */
+  gap:14px;
+}
+.panel{
+  border:1px solid rgba(255,255,255,.08); border-radius:var(--radius);
+  background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.30));
+  box-shadow:var(--shadow-panel);
+}
+
+/* ===== Palette ===== */
+.palette{ padding:12px; position:relative; }
+.p-title{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.18em; margin-bottom:8px; text-align:center }
+.pgrid{ display:grid; grid-template-columns: 2fr 1fr; gap:10px; }
+.pcol{ display:flex; flex-direction:column; align-items:stretch; gap:10px; }
+.pcol h3{ margin:0; font-size:11px; text-transform:uppercase; letter-spacing:.18em; color:var(--muted); text-align:center }
+
+/* Arrow-pad grid like keyboard arrows */
+.arrowPad{
+  display:grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-auto-rows: 50px;             /* smaller than before */
+  gap:10px;
+}
+.spacer{ visibility:hidden; }
+
+.tile{
+  position:relative; height:50px;   /* was 56px */
+  border-radius:14px; user-select:none;
+  border:1px solid rgba(255,255,255,.10);
+  background:linear-gradient(145deg,#1e2532,#232b3a);
+  box-shadow:var(--shadow-inner),0 16px 28px rgba(0,0,0,.45);
+  display:grid; place-items:center;
+  transition:transform .12s, filter .2s, opacity .2s;
+}
+.tile:hover{ transform:translateY(-2px) }
+.tile .arrow{
+  width:26px; height:26px;
+  background:linear-gradient(90deg,#d54591 0%, #2eb6e6 100%);
+  -webkit-mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M32 6l22 22h-14v30h-16V28H10z" fill="black"/></svg>') no-repeat center/contain;
+          mask: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><path d="M32 6l22 22h-14v30h-16V28H10z" fill="black"/></svg>') no-repeat center/contain;
+  transform: rotate(0deg);
+  filter: drop-shadow(0 2px 10px rgba(0,0,0,.5));
+}
+.tile.num{ font-weight:900; font-size:20px; letter-spacing:.06em; background:linear-gradient(145deg,#2b3344,#2e3a55); }
+.gen-tile{ cursor:pointer }
+
+.robot{
+  position:absolute; width:40px; height:40px; border-radius:10px;
+  background:linear-gradient(145deg,#5dd6ff,#8b5cf6);
+  box-shadow:0 10px 24px rgba(0,0,0,.45);
+  transform: translate(-50%, -50%);
+  left:0; top:0;
+  transition: left .22s ease, top .22s ease;
+  display:grid; place-items:center;
+  z-index: 10;                 
+}
+.robot::after{ content:'🤖'; font-size:24px; filter:drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
+.robot.carry::after{ content:'🚩'; }  
+
+
+/* ===== Program ===== */
+.program{ display:flex; flex-direction:column; min-height:420px; }
+.p-head{ padding:8px 10px; border-bottom:1px solid rgba(255,255,255,.08); color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.18em }
+.colhdr{ display:grid; grid-template-columns: var(--colA) var(--colB); gap:8px; padding:6px 8px; color:var(--muted); font-size:11px; letter-spacing:.12em; text-transform:uppercase }
+.colhdr .hdr-mod{ display:block }
+.rows{ padding:8px; display:flex; flex-direction:column; gap:4px; overflow:auto; max-height:420px; }
+.row{ position:relative; display:grid; grid-template-columns: var(--colA) var(--colB); gap:8px; }
+.program.no-mods .colhdr{ grid-template-columns: 1fr; }
+.program.no-mods .colhdr .hdr-mod{ display:none }
+.program.no-mods .row{ grid-template-columns: 1fr; }
+.program.no-mods .row .slot[data-accept="num"]{ display:none }
+
+.slot{
+  position:relative; height:44px; border-radius:10px; border:1px dashed rgba(255,255,255,.18);
+  background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(0,0,0,.22));
+  display:grid; place-items:center;
+}
+.slot.hover{ outline:2px solid rgba(93,214,255,.8) }
+.slot .tile{ height:38px; width:100%; border-radius:8px; cursor:grab; display:grid; place-items:center }
+.slot .tile .arrow{ width:24px; height:24px }
+.slot .tile.num{ font-size:22px; font-weight:900; cursor:grab }
+
+/* Fixed-position + buttons (no lateral movement on hover) */
+.insBtn{
+  position:absolute; left:50%; transform:translateX(-50%);  /* fixed center */
+  width:22px; height:22px; border-radius:999px; cursor:pointer; opacity:0;
+  border:1px dashed rgba(255,255,255,.25);
+  background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(0,0,0,.24));
+  color:#cfe9ff; font-weight:900; font-size:14px; line-height:20px; display:grid; place-items:center;
+  transition:opacity .15s ease; /* no transform/size transition */
+  pointer-events:auto;
+}
+.insBtn.top{ top:-8px; }
+.insBtn.bottom{ bottom:-8px; }
+.row:hover .insBtn{ opacity:1; }
+.insBtn:hover{ border-color:rgba(93,214,255,.85); color:#e9f6ff }
+
+/* Controls */
+.p-controls{ padding:8px; display:flex; gap:10px; justify-content:center; border-top:1px solid rgba(255,255,255,.08) }
+button{
+  appearance:none; border:1px solid rgba(255,255,255,.08); border-radius:12px; cursor:pointer;
+  padding:10px 14px; background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(0,0,0,.3));
+  color:var(--ink); font:inherit; box-shadow:var(--shadow-inner); transition:transform .08s, filter .18s, opacity .2s;
+}
+button:hover:not(:disabled){ transform:translateY(-1px) }
+button:active:not(:disabled){ transform:translateY(0) scale(.97) }
+button:disabled{ opacity:.5; cursor:default }
+.primary{ background:linear-gradient(90deg,#d54591 0%, #2eb6e6 100%); color:#fff; font-weight:700; padding:12px 22px; border-radius:999px; min-width:220px; }
+
+/* ===== Board ===== */
+.board{ padding:12px; }
+.grid{
+  position:relative; width:100%; aspect-ratio:1 / 1; border-radius:14px; overflow:hidden;
+  border:1px solid rgba(255,255,255,.08);
+  background:
+    repeating-linear-gradient(0deg, rgba(255,255,255,.04) 0 1px, transparent 1px 1fr),
+    repeating-linear-gradient(90deg, rgba(255,255,255,.04) 0 1px 1px, transparent 1px 1fr),
+    linear-gradient(180deg, rgba(255,255,255,.05), rgba(0,0,0,.25));
+}
+.cell{ position:absolute; box-sizing:border-box; border:1px solid rgba(255,255,255,.2); }
+.base{ position:absolute; box-sizing:border-box; border:4px solid var(--accent-green); border-radius:6px; }
+
+/* hazards & decor */
+.lava{
+  position:absolute; box-sizing:border-box; border-radius:6px;
+  background: linear-gradient(135deg, rgba(239,68,68,.85), rgba(245,158,11,.85));
+  outline:1px solid rgba(0,0,0,.25);
+  filter: drop-shadow(0 6px 14px rgba(239,68,68,.25));
+}
+.icon{
+  position:absolute; width:100%; height:100%;
+  display:grid; place-items:center; pointer-events:none;
+  font-size:48px;                           /* BIGGER icons */
+  transform:translateY(-2px);
+}
+.wall{
+  position:absolute; box-sizing:border-box; border-radius:6px;
+  background:linear-gradient(145deg,#d7dee9,#b9c4d4); /* lighter grey */
+  outline:1px solid rgba(35,45,60,.28);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.25);
+}
+
+/* Status & overlays */
+.status{ text-align:center; margin:8px 0 0; font-size:16px; color:var(--muted) }
+#confetti{ position:fixed; inset:0; pointer-events:none }
+.overlay{ position:fixed; inset:0; display:none; place-items:center; background: linear-gradient(180deg, rgba(0,0,0,.42), rgba(0,0,0,.42)); }
+.overlay .card{
+  padding:22px 26px; border-radius:16px; border:1px solid rgba(255,255,255,.12);
+  background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(0,0,0,.35));
+  box-shadow: var(--shadow-panel); text-align:center; max-width:520px;
+}
+.overlay h2{ margin:0 0 8px }
+.win{ color:var(--accent-green) }
+.fail{ color:var(--accent-red) }
+.btn-danger{ background:linear-gradient(90deg,#ef4444 0%, #f59e0b 100%); color:#fff; font-weight:700; border-radius:999px; min-width:200px; }
+</style>
+</head>
+<body>
+<canvas id="confetti"></canvas>
+<div class="app">
+  <div class="header">
+    <button id="btnNew" class="btn-ghost" title="Start a new game (resets to Level 1)">New Game</button>
+    <div>
+      <h1>PROGRAM THE ROBOT</h1>
+      <div class="sub">Program your robot to collect the flag and return it to base!</div>
+      <div class="levelRow">
+        <button id="lvlDown" class="lvlbtn" title="Previous level">-</button>
+        <div class="level" id="levelLabel">Level: 1</div>
+        <button id="lvlUp" class="lvlbtn" title="Next level">+</button>
+      </div>
+      <div class="feats" id="featList">Unlocked: —</div>
+    </div>
+    <div></div>
+  </div>
+
+  <div class="main">
+    <!-- PALETTE -->
+    <section class="panel palette">
+      <div class="p-title">Palette</div>
+      <div class="pgrid">
+        <div class="pcol" id="palArrows"><h3>Arrows</h3></div>
+        <div class="pcol" id="palNums"><h3>Numbers</h3></div>
+      </div>
+    </section>
+
+    <!-- PROGRAM LIST -->
+    <section class="panel program" id="programPanel">
+      <div class="p-head">Program</div>
+      <div class="colhdr"><div>Action</div><div class="hdr-mod">x Times</div></div>
+      <div class="rows" id="rows"></div>
+      <div class="p-controls">
+        <button id="btnRun" class="primary">Run Program</button>
+        <button id="btnClear">Clear Program</button>
+      </div>
+      <div class="status" id="status">Tip: Right-click a tile to <b>delete</b>. Hover a row to insert above/below.</div>
+    </section>
+
+    <!-- BOARD -->
+    <section class="panel board">
+      <div id="grid" class="grid"></div>
+    </section>
+  </div>
+</div>
+
+<!-- Win/Fail overlay -->
+<div class="overlay" id="overlay">
+  <div class="card">
+    <h2 id="ovTitle">Success!</h2>
+    <p id="ovMsg" class="status"></p>
+    <button id="ovClose" class="primary">OK</button>
+  </div>
+</div>
+
+<!-- Confirm Delete overlay -->
+<div class="overlay" id="confirmOverlay" aria-modal="true" role="dialog" aria-labelledby="confirmTitle">
+  <div class="card">
+    <h2 id="confirmTitle">Delete entire program?</h2>
+    <p class="status">This will clear all steps.</p>
+    <div style="display:flex;gap:10px;justify-content:center;margin-top:10px">
+      <button id="btnConfirmDelete" class="btn-danger">Delete Program</button>
+      <button id="btnCancelDelete" class="btn-ghost">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+/* ===== Audio thump ===== */
+const AC = window.AudioContext || window.webkitAudioContext;
+const audioCtx = AC ? new AC() : null;
+async function thump(){
+  try{
+    if(!audioCtx) return;
+    if(audioCtx.state==='suspended') await audioCtx.resume();
+    const o1=audioCtx.createOscillator(), o2=audioCtx.createOscillator();
+    o1.type='triangle'; o2.type='sine';
+    o1.frequency.setValueAtTime(120, audioCtx.currentTime);
+    o2.frequency.setValueAtTime(90,  audioCtx.currentTime);
+    o1.frequency.exponentialRampToValueAtTime(60, audioCtx.currentTime+0.09);
+    o2.frequency.exponentialRampToValueAtTime(55, audioCtx.currentTime+0.09);
+    const f=audioCtx.createBiquadFilter(); f.type='lowpass'; f.frequency.value=240;
+    const g=audioCtx.createGain();
+    g.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.9,  audioCtx.currentTime+0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime+0.22);
+    o1.connect(f); o2.connect(f); f.connect(g); g.connect(audioCtx.destination);
+    o1.start(); o2.start(); o1.stop(audioCtx.currentTime+0.24); o2.stop(audioCtx.currentTime+0.24);
+  }catch(_){}
+}
+
+/* ===== Confetti (simple) ===== */
+const confettiCanvas=document.getElementById('confetti'), cctx=confettiCanvas.getContext('2d');
+function sizeCanvas(){ confettiCanvas.width=innerWidth; confettiCanvas.height=innerHeight; }
+sizeCanvas(); addEventListener('resize', sizeCanvas);
+const bits=[];
+function confetti(n=160){ for(let i=0;i<n;i++) bits.push({x:Math.random()*innerWidth,y:-20*Math.random(),v:0.5+Math.random()*1.0,s:4+6*Math.random(),a:Math.random()*360,r:1+Math.random()*2,c:`hsl(${Math.random()*360},100%,70%)`}); }
+(function draw(){ cctx.clearRect(0,0,innerWidth,innerHeight);
+  bits.forEach((b,i)=>{ b.y+=b.v; b.a+=b.r; cctx.save(); cctx.translate(b.x,b.y); cctx.rotate(b.a*Math.PI/180);
+    cctx.fillStyle=b.c; cctx.fillRect(-b.s/2,-b.s/2,b.s,b.s); cctx.restore();
+    if(b.y>innerHeight+50) bits.splice(i,1);
+  }); requestAnimationFrame(draw);
+})();
+
+/* ===== DOM ===== */
+const gridEl = document.getElementById('grid');
+const rowsEl = document.getElementById('rows');
+const programPanel = document.getElementById('programPanel');
+const palArrows = document.getElementById('palArrows');
+const palNums   = document.getElementById('palNums');
+const statusEl  = document.getElementById('status');
+
+const btnRun = document.getElementById('btnRun');
+const btnClear = document.getElementById('btnClear');
+const btnNew = document.getElementById('btnNew');
+
+const overlay = document.getElementById('overlay');
+const ovTitle = document.getElementById('ovTitle');
+const ovMsg   = document.getElementById('ovMsg');
+const ovClose = document.getElementById('ovClose');
+
+const confirmOverlay = document.getElementById('confirmOverlay');
+const btnConfirmDelete = document.getElementById('btnConfirmDelete');
+const btnCancelDelete  = document.getElementById('btnCancelDelete');
+
+const levelLabel = document.getElementById('levelLabel');
+const featList   = document.getElementById('featList');
+const lvlDownBtn = document.getElementById('lvlDown');
+const lvlUpBtn   = document.getElementById('lvlUp');
+
+/* ===== Level maps (9x9) =====
+   0 empty, 1 flag 🏁, 2 lava, 3 🌋, 4 🔥, 5 wall
+   Origin is top-Left
+   IMPORTANT: first coordinate is Y, not X as you might expect:
+     (3,6) is starting at the top left corner: down 3, right 6
+*/
+const L0 = Array.from({length:9},()=>Array(9).fill(0));
+function withFlag(grid, r, c){ const g=grid.map(row=>row.slice()); g[r][c]=1; return g; }
+const LEVELS = {
+  1: withFlag(L0, 3, 6), // this means the map is blank with flag at 3,6
+  2: (()=>{
+      const g=L0.map(r=>r.slice());
+	  [[4,3],[4,4],[4,5]].forEach(([r,c])=>g[r][c]=2);
+      [[1,2],[1,6],[2,1],[2,7],[8,1],[8,7]].forEach(([r,c])=>g[r][c]=5);
+      g[2][4]=1; return g;
+    })(),
+  3: (()=>{
+      const g=L0.map(r=>r.slice());
+      [[0,0],[0,8],[8,0],[8,8]].forEach(([r,c])=>g[r][c]=5);
+      [[2,2],[2,6],[4,4]].forEach(([r,c])=>g[r][c]=3);
+      [[3,2],[3,6],[5,4]].forEach(([r,c])=>g[r][c]=4);
+      [[1,1],[1,7],[6,3],[6,5]].forEach(([r,c])=>g[r][c]=2);
+      g[1][6]=1; return g;
+    })(),
+  4: (()=>{
+      const g=L0.map(r=>r.slice());
+      for(let c=0;c<9;c+=2) g[2][c]=5;
+      for(let c=1;c<9;c+=2) g[4][c]=5;
+      [[0,4],[3,7],[5,1],[6,6]].forEach(([r,c])=>g[r][c]=3);
+      [[1,3],[1,5],[7,2],[7,6]].forEach(([r,c])=>g[r][c]=4);
+      [[3,3],[3,5],[6,1],[6,7]].forEach(([r,c])=>g[r][c]=2);
+      g[0][4]=1; return g;
+    })(),
+
+  /* Level 5 — Gate Stack
+     Three “gate” rows of walls with offset openings; you must align to each gap.
+     Open rows between gates let you sidestep to the next opening.
+     Gaps: row 6 → col 4; row 4 → cols 3 & 5; row 2 → cols 1 & 7.
+  */
+  5: (() => {
+    const g = L0.map(r => r.slice());
+    // gate at row 6 (one opening at c=4)
+    for (let c = 0; c < 9; c++) g[6][c] = 5; g[6][4] = 0;
+    // gate at row 4 (two openings)
+    for (let c = 0; c < 9; c++) g[4][c] = 5; g[4][3] = 0; g[4][5] = 0;
+    // gate at row 2 (two openings far apart)
+    for (let c = 0; c < 9; c++) g[2][c] = 5; g[2][1] = 0; g[2][7] = 0;
+    // hazards in the open rows between gates
+    [[5,6],[5,2]].forEach(([r,c]) => g[r][c] = 4);
+    [[3,4]].forEach(([r,c]) => g[r][c] = 2);
+    // a volcano near the right-hand route
+    g[1][7] = 3;
+    // flag
+    g[0][7] = 1;
+    return g;
+  })(),
+
+  /* Level 6 — Lattice Alleys
+     Four vertical “fences” (cols 1,3,5,7) with staggered holes to thread through.
+     Requires planning side-steps on the open rows.
+  */
+  6: (() => {
+    const g = L0.map(r => r.slice());
+    // fences in columns with staggered gaps
+    const fences = [
+      { c:1, gaps:[4] },
+      { c:3, gaps:[2,6] },
+      { c:5, gaps:[3,7] },
+      { c:7, gaps:[5] }
+    ];
+    for (const {c, gaps} of fences) {
+      for (let r = 1; r <= 7; r++) g[r][c] = 5;
+      gaps.forEach(r => g[r][c] = 0);
+    }
+    // scattered hot tiles that narrow choices
+    [[1,2],[3,6],[5,4],[6,8]].forEach(([r,c]) => g[r][c] = 4);
+    [[2,8],[4,0]].forEach(([r,c]) => g[r][c] = 2);
+    // flag top-right corner
+    g[0][8] = 1;
+    return g;
+  })(),
+
+  /* Level 7 — Twin Volcano Funnels
+     Two volcanoes create funnels; paired wall columns force commits.
+     You’ll time your lateral moves through the column gaps.
+  */
+  7: (() => {
+    const g = L0.map(r => r.slice());
+    // twin volcanoes near the top
+    g[1][3] = 3; g[1][5] = 3;
+    // vertical wall columns with holes
+    for (let r = 1; r <= 7; r++) g[r][2] = 5;
+    for (let r = 1; r <= 7; r++) g[r][6] = 5;
+    // holes in the columns
+    g[4][2] = 0; g[2][6] = 0; g[6][6] = 0;
+    // some fires and lava to punish overshoot
+    [[5,1],[5,0],[3,7],[3,8]].forEach(([r,c]) => g[r][c] = 4);
+    [[2,4],[6,4]].forEach(([r,c]) => g[r][c] = 2);
+    // flag at the top center lane
+    g[0][4] = 1;
+    return g;
+  })(),
+
+  /* Level 8 — Serpentine Gauntlet
+     Alternating lava “bars” with single safe columns force a serpentine climb.
+     Open rows between bars are your lanes to sidestep into the next safe column.
+  */
+  8: (() => {
+    const g = L0.map(r => r.slice());
+    // lava bars with one safe column each
+    const bars = [
+      { r:7, safe:4 },
+      { r:5, safe:1 },
+      { r:3, safe:6 },
+      { r:1, safe:4 }
+    ];
+    for (const {r, safe} of bars) {
+      for (let c = 0; c < 9; c++) g[r][c] = 2;
+      g[r][safe] = 0; // carve safe column in that row
+    }
+    // walls to reduce alternative routes (but keep path doable)
+    [[6,0],[6,8],[4,0],[4,8],[2,0],[2,8]].forEach(([r,c]) => g[r][c] = 5);
+    // fires guarding the last sidestep
+    [[2,2],[2,7]].forEach(([r,c]) => g[r][c] = 4);
+    // flag at the very top, aligned with final bar's safe column
+    g[0][4] = 1;
+    return g;
+  })()
+};
+
+/* ===== Board / Level state ===== */
+const N=9;
+let base={r:N-1, c:Math.floor(N/2)};
+let robot={r:base.r,c:base.c}, carrying=false;
+let level=1, nextLevelPending=false;
+let levelGrid=L0.map(r=>r.slice());
+let robotEl;
+/* reference to flag icon element (created from grid code 1) */
+let flagIconEl=null;
+/* track row of last placed arrow (for number clicks) */
+let lastArrowRowIndex = null;
+
+/* Features summary */
+function featuresForLevel(lvl){
+  const numbers = lvl>=3;
+  const g = getLevelGrid(lvl);
+  const has = {lava:false, volcano:false, fire:false, wall:false};
+  for(let r=0;r<N;r++)for(let c=0;c<N;c++){
+    const v=g[r][c];
+    if(v===2) has.lava=true; if(v===3) has.volcano=true; if(v===4) has.fire=true; if(v===5) has.wall=true;
+  }
+  return { numbers, hazards: has };
+}
+function renderFeatureList(){
+  const f=featuresForLevel(level);
+  const arr=[];
+  if(f.numbers) arr.push('Numbers');
+  const h=f.hazards; const hz=[]; if(h.lava) hz.push('Lava'); if(h.volcano) hz.push('Volcano'); if(h.fire) hz.push('Fire'); if(h.wall) hz.push('Walls');
+  if(hz.length) arr.push('Hazards: '+hz.join(', '));
+  featList.textContent = 'Unlocked: ' + (arr.length? arr.join(' · ') : '—');
+}
+
+/* ===== Grid helpers ===== */
+function getLevelGrid(lvl){ return LEVELS[lvl] ? LEVELS[lvl] : withFlag(L0, 1, Math.floor(N/2)); }
+function findFlagInGrid(g){ for(let r=0;r<N;r++) for(let c=0;c<N;c++) if(g[r][c]===1) return {r,c}; return {r:1,c:Math.floor(N/2)}; }
+function tileAt(r,c){ return (r<0||r>=N||c<0||c>=N) ? -1 : levelGrid[r][c]; }
+function isBlocked(r,c){ const v=tileAt(r,c); return v===2 || v===3 || v===4 || v===5; }
+
+function buildGrid(){
+  gridEl.innerHTML=''; flagIconEl=null;
+  const wPct = 100/N;
+
+  // cells
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const d=document.createElement('div'); d.className='cell';
+    d.style.left=(c*wPct)+'%'; d.style.top=(r*wPct)+'%'; d.style.width=wPct+'%'; d.style.height=wPct+'%';
+    gridEl.appendChild(d);
+  }
+  // base
+  const baseEl=document.createElement('div');
+  baseEl.className='base';
+  baseEl.style.left=(base.c*wPct)+'%'; baseEl.style.top=(base.r*wPct)+'%';
+  baseEl.style.width=wPct+'%'; baseEl.style.height=wPct+'%';
+  gridEl.appendChild(baseEl);
+
+  // hazards/decor + flag from table
+  for(let r=0;r<N;r++) for(let c=0;c<N;c++){
+    const v=levelGrid[r][c];
+    if(v===0) continue;
+    const box=document.createElement('div'); box.style.position='absolute';
+    box.style.left=(c*wPct)+'%'; box.style.top=(r*wPct)+'%';
+    box.style.width=wPct+'%'; box.style.height=wPct+'%';
+    if(v===2){
+      const lv=document.createElement('div'); lv.className='lava';
+      lv.style.left='0'; lv.style.top='0'; lv.style.width='100%'; lv.style.height='100%';
+      box.appendChild(lv);
+    }else if(v===3 || v===4 || v===1){
+      const i=document.createElement('div'); i.className='icon';
+      i.textContent = (v===3) ? '🌋' : (v===4) ? '🔥' : '🚩';
+      if(v===1) { i.dataset.flag='1'; flagIconEl=i; if(carrying) i.style.display='none'; }
+      box.appendChild(i);
+    }else if(v===5){
+      const wl=document.createElement('div'); wl.className='wall';
+      wl.style.left='0'; wl.style.top='0'; wl.style.width='100%'; wl.style.height='100%';
+      box.appendChild(wl);
+    }
+    gridEl.appendChild(box);
+  }
+
+  // robot
+  robotEl=document.createElement('div'); robotEl.className='robot'; gridEl.appendChild(robotEl);
+  positionRobot();
+}
+function positionRobot(){
+  const x=(robot.c+0.5)*(100/N), y=(robot.r+0.5)*(100/N);
+  robotEl.style.left=x+'%'; robotEl.style.top=y+'%'; robotEl.classList.toggle('carry',carrying);
+}
+
+/* ===== Program rows (with fixed + buttons) ===== */
+function makeRow(){
+  const row=document.createElement('div'); row.className='row';
+  const a=document.createElement('div'); a.className='slot'; a.dataset.accept='arrow';
+  const m=document.createElement('div'); m.className='slot'; m.dataset.accept='num';
+  const top=document.createElement('button'); top.type='button'; top.className='insBtn top'; top.textContent='+';
+  const bot=document.createElement('button'); bot.type='button'; bot.className='insBtn bottom'; bot.textContent='+';
+  top.addEventListener('click', (e)=>{ e.stopPropagation(); const idx=rowIndex(row); addRow(idx); });
+  bot.addEventListener('click', (e)=>{ e.stopPropagation(); const idx=rowIndex(row); addRow(idx+1); });
+  row.appendChild(a); row.appendChild(m); row.appendChild(top); row.appendChild(bot);
+  return row;
+}
+function rowIndex(row){ return [...rowsEl.querySelectorAll('.row')].indexOf(row); }
+function addRow(index){
+  const row=makeRow();
+  const at=[...rowsEl.querySelectorAll('.row')][index] || null;
+  if(at) rowsEl.insertBefore(row, at); else rowsEl.appendChild(row);
+}
+function clearProgram(){
+  rowsEl.innerHTML='';
+  for(let i=0;i<8;i++) rowsEl.appendChild(makeRow());
+  lastArrowRowIndex = null;
+}
+
+/* ===== Tiles ===== */
+function makeTileArrow(dir){
+  const t=document.createElement('div'); t.className='tile'; t.dataset.type='arrow'; t.dataset.dir=String(dir);
+  const a=document.createElement('div'); a.className='arrow'; a.style.transform=`rotate(${dir*90}deg)`; t.appendChild(a);
+  attachProgramTileHandlers(t); return t;
+}
+function makeTileNumber(n){
+  const t=document.createElement('div'); t.className='tile num'; t.dataset.type='num'; t.dataset.num=String(n); t.textContent=n;
+  attachProgramTileHandlers(t); return t;
+}
+
+/* ===== Palette render ===== */
+function renderPalette(){
+  palArrows.innerHTML='<h3>Arrows</h3>';
+  palNums.innerHTML  ='<h3>Numbers</h3>';
+
+  // Arrow pad layout like keyboard arrows
+  const pad=document.createElement('div'); pad.className='arrowPad';
+  // row 1: [spacer] [up] [spacer]
+  pad.appendChild(document.createElement('div')).className='spacer';
+  pad.appendChild(makeGenArrow(0));
+  pad.appendChild(document.createElement('div')).className='spacer';
+  // row 2: [left] [down] [right]
+  pad.appendChild(makeGenArrow(3));
+  pad.appendChild(makeGenArrow(2));
+  pad.appendChild(makeGenArrow(1));
+  palArrows.appendChild(pad);
+
+  const feats=featuresForLevel(level);
+  if(feats.numbers){
+    for(let n=0;n<=9;n++){
+      const el=document.createElement('div'); el.className='tile num gen-tile'; el.dataset.type='num'; el.dataset.num=String(n);
+      el.textContent=n; el.title=`Number ${n} — click or drag to add`;
+      attachPaletteHandlers(el); palNums.appendChild(el);
+    }
+    palNums.style.display='';
+  }else{
+    palNums.style.display='none';
+  }
+}
+function makeGenArrow(dir){
+  const el=document.createElement('div'); el.className='tile gen-tile'; el.dataset.type='arrow'; el.dataset.dir=String(dir);
+  const a=document.createElement('div'); a.className='arrow'; a.style.transform=`rotate(${dir*90}deg)`; el.appendChild(a);
+  el.title = ['Up','Right','Down','Left'][dir]+' — click or drag to add';
+  attachPaletteHandlers(el);
+  return el;
+}
+
+/* ===== Palette: click & drag ===== */
+function rowIndexOfSlot(slot){ return rowIndex(slot.closest('.row')); }
+function firstEmptySlot(kind){
+  const sel = kind==='arrow' ? '.row .slot[data-accept="arrow"]' : '.row .slot[data-accept="num"]';
+  let slot = [...rowsEl.querySelectorAll(sel)].find(s=>!s.querySelector('.tile')) || null;
+  if(!slot){ addRow([...rowsEl.querySelectorAll('.row')].length); slot=[...rowsEl.querySelectorAll(sel)].find(s=>!s.querySelector('.tile')) || null; }
+  return slot;
+}
+function addToFirstEmpty(tile, kind){
+  const slot = firstEmptySlot(kind); if(!slot){ status('No available slot.'); return; }
+  slot.innerHTML=''; slot.appendChild(tile);
+  const ri = rowIndexOfSlot(slot);
+  if(kind==='arrow') lastArrowRowIndex = ri;
+  status('Added to row '+(ri+1));
+  slot.scrollIntoView({block:'nearest', behavior:'smooth'});
+}
+function addNumberToMostRecentRow(n){
+  const rows=[...rowsEl.querySelectorAll('.row')];
+  const hasArrow=i=>!!rows[i]?.querySelector('.slot[data-accept="arrow"] .tile');
+  const hasEmptyNum=i=>rows[i] && !rows[i].querySelector('.slot[data-accept="num"] .tile');
+  let target=null;
+  if(lastArrowRowIndex!=null && hasArrow(lastArrowRowIndex) && hasEmptyNum(lastArrowRowIndex)){
+    target=rows[lastArrowRowIndex].querySelector('.slot[data-accept="num"]');
+  }else{
+    for(let i=rows.length-1;i>=0;i--) if(hasArrow(i) && hasEmptyNum(i)){ target=rows[i].querySelector('.slot[data-accept="num"]'); break; }
+  }
+  if(!target){ status('No recent arrow to modify. Place an arrow first.'); return; }
+  target.innerHTML=''; target.appendChild(makeTileNumber(n));
+  status('Set repeat on row '+(rowIndexOfSlot(target)+1));
+}
+function attachPaletteHandlers(el){
+  el.addEventListener('click', ()=>{
+    if(el.dataset.type==='arrow'){ addToFirstEmpty(makeTileArrow(parseInt(el.dataset.dir||'0',10)), 'arrow'); }
+    else{
+      const feats=featuresForLevel(level); if(!feats.numbers){ status('Numbers unlock at Level 3.'); return; }
+      addNumberToMostRecentRow(parseInt(el.dataset.num||'0',10));
+    }
+  });
+  el.addEventListener('pointerdown', (e)=>{ startDrag({ from:'palette', protoEl:el, startEvent:e }); });
+}
+
+/* ===== Drag & Drop (strict acceptance; wrong drop => delete) ===== */
+let drag=null;
+function startDrag({from, protoEl, startEvent}){
+  let tileType, tileData;
+  if(from==='palette'){
+    tileType=protoEl.dataset.type;
+    tileData = tileType==='arrow' ? {dir:parseInt(protoEl.dataset.dir||'0',10)} : {num:parseInt(protoEl.dataset.num||'0',10)};
+  }else if(from==='slot'){
+    const el=protoEl; tileType=el.dataset.type;
+    tileData = tileType==='arrow' ? {dir:parseInt(el.dataset.dir||'0',10)} : {num:parseInt(el.dataset.num||'0',10)};
+  }else return;
+
+  const srcSlot = (from==='slot') ? protoEl.parentElement : null;
+
+  const clone = (tileType==='arrow'?makeTileArrow(tileData.dir):makeTileNumber(tileData.num));
+  clone.style.position='fixed'; clone.style.zIndex='1000';
+  clone.style.width = (srcSlot? srcSlot.clientWidth : 140)+'px'; clone.style.pointerEvents='none';
+  document.body.appendChild(clone);
+
+  drag = { from, tileType, tileData, clone, srcSlot, overSlot:null };
+
+  function move(e){
+    const x=e.clientX, y=e.clientY; clone.style.left=(x-28)+'px'; clone.style.top=(y-28)+'px';
+    const slots=[...rowsEl.querySelectorAll('.slot')];
+    let hit=null; for(const s of slots){ const r=s.getBoundingClientRect(); if(x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom){ hit=s; break; } }
+    if(drag.overSlot && drag.overSlot!==hit) drag.overSlot.classList.remove('hover');
+    drag.overSlot=hit; if(hit) hit.classList.add('hover');
+  }
+  function up(){
+    document.removeEventListener('pointermove', move);
+    document.removeEventListener('pointerup', up);
+    if(drag.overSlot && drag.overSlot.dataset.accept===tileType){
+      drag.overSlot.classList.remove('hover'); drag.overSlot.innerHTML='';
+      const finalTile=(tileType==='arrow'?makeTileArrow(drag.tileData.dir):makeTileNumber(drag.tileData.num));
+      drag.overSlot.appendChild(finalTile);
+      const ri = rowIndexOfSlot(drag.overSlot); if(tileType==='arrow') lastArrowRowIndex=ri;
+      status('Dropped on row '+(ri+1));
+    }else{
+      status('Invalid drop: deleted.');
+    }
+    clone.remove(); drag=null;
+  }
+  move(startEvent);
+  document.addEventListener('pointermove', move);
+  document.addEventListener('pointerup', up, {once:true});
+  if(srcSlot){ srcSlot.innerHTML=''; }
+}
+
+/* Program tiles: right-click deletes */
+function attachProgramTileHandlers(tile){
+  tile.addEventListener('contextmenu', (e)=>{ e.preventDefault(); const parent=tile.parentElement; tile.remove(); if(parent) parent.classList.remove('hover'); status('Deleted.'); });
+  tile.addEventListener('pointerdown', (e)=>{ startDrag({ from:'slot', protoEl:tile, startEvent:e }); });
+}
+
+/* ===== Status ===== */
+function status(msg){ statusEl.textContent=msg; }
+
+/* ===== Parse rows → steps ===== */
+function parseRowsToSteps(){
+  const steps=[], rows=[...rowsEl.querySelectorAll('.row')];
+  for(const row of rows){
+    const a=row.querySelector('.slot[data-accept="arrow"] .tile');
+    const m=row.querySelector('.slot[data-accept="num"] .tile');
+    if(!a) continue;
+    const dir=parseInt(a.dataset.dir||'0',10);
+    const rep=m? Math.max(0,parseInt(m.dataset.num||'0',10)) : 1;
+    for(let k=0;k<rep;k++) steps.push(dir);
+  }
+  return steps;
+}
+
+/* ===== Run logic ===== */
+let running=false;
+const DIRS=[{dr:-1,dc:0},{dr:0,dc:1},{dr:1,dc:0},{dr:0,dc:-1}];
+function resetToLevelStart(){
+  const flagPos=findFlagInGrid(levelGrid);
+  robot={r:base.r,c:base.c}; carrying=false;
+  if(flagIconEl) flagIconEl.style.display=''; // make visible
+  positionRobot();
+}
+function updateLevelLabel(){ levelLabel.textContent=`Level: ${level}`; renderFeatureList(); }
+
+async function runProgram(){
+  if(running) return;
+  const steps=parseRowsToSteps();
+  if(steps.length===0){ status('Program is empty. Add actions (and optional numbers).'); return; }
+
+  resetToLevelStart();
+
+  running=true; btnRun.disabled=true; btnClear.disabled=true; btnNew.disabled=true;
+
+  let success=false;
+  const flagPos=findFlagInGrid(levelGrid);
+
+  for(let i=0;i<steps.length;i++){
+    const d=DIRS[steps[i]], nr=robot.r+d.dr, nc=robot.c+d.dc;
+    if(nr<0||nr>=N||nc<0||nc>=N){ await bump(); status(`Aborted at step ${i+1}: off the grid.`); break; }
+    if(isBlocked(nr,nc)){
+      await bump(); const v=tileAt(nr,nc); const why=(v===2?'lava':v===3?'volcano':v===4?'fire':'a wall');
+      status(`Aborted at step ${i+1}: hit ${why}.`); break;
+    }
+    robot.r=nr; robot.c=nc; await thump(); positionRobot();
+
+    if(!carrying && robot.r===flagPos.r && robot.c===flagPos.c){
+      carrying=true; if(flagIconEl) flagIconEl.style.display='none';
+      status('Flag collected! Return to base.');
+    }
+    if(carrying && robot.r===base.r && robot.c===base.c){ success=true; break; }
+    await delay(220);
+  }
+
+  running=false; btnRun.disabled=false; btnClear.disabled=false; btnNew.disabled=false;
+
+  if(success){
+    confetti(220);
+    level++; updateLevelLabel();
+    ovTitle.textContent='Success!'; ovTitle.className='win';
+    ovMsg.textContent=`Flag returned. Ready for Level ${level}?`;
+    nextLevelPending=true;
+    overlay.style.display='grid';
+  }else{
+    // DO NOT reset robot yet — let player see failure until they click OK
+    ovTitle.textContent='Program Finished'; ovTitle.className='fail';
+    ovMsg.textContent='Flag not returned. Edit your program and try again.';
+    nextLevelPending=false;
+    overlay.style.display='grid';
+  }
+}
+
+function delay(ms){ return new Promise(r=>setTimeout(r,ms)); }
+async function bump(){
+  const baseTr='translate(-50%, -50%)';
+  function j(dx,dy){ robotEl.style.transition='transform .08s'; robotEl.style.transform=`${baseTr} translate(${dx}px, ${dy}px)`; }
+  j(-4,0); await delay(80); j(4,0); await delay(80);
+  robotEl.style.transform=baseTr; robotEl.style.transition='left .22s ease, top .22s ease';
+}
+
+/* ===== Buttons / overlays / level stepper ===== */
+btnRun.addEventListener('click', runProgram);
+
+btnClear.addEventListener('click', ()=>{ confirmOverlay.style.display='grid'; });
+btnConfirmDelete.addEventListener('click', ()=>{ clearProgram(); confirmOverlay.style.display='none'; status('Program cleared.'); });
+btnCancelDelete.addEventListener('click', ()=>{ confirmOverlay.style.display='none'; });
+
+btnNew.addEventListener('click', ()=> newGame(true));
+ovClose.addEventListener('click', ()=>{
+  overlay.style.display='none';
+  if(nextLevelPending){ newGame(false); }
+  else{ resetToLevelStart(); } // failure: reset AFTER player acknowledged
+});
+overlay.addEventListener('click', (e)=>{ if(e.target===overlay){ ovClose.click(); }});
+confirmOverlay.addEventListener('click', (e)=>{ if(e.target===confirmOverlay) confirmOverlay.style.display='none'; });
+
+lvlDownBtn.addEventListener('click', ()=>{ if(level>1){ level--; newGame(false); } });
+lvlUpBtn.addEventListener('click', ()=>{ level++; newGame(false); });
+
+/* ===== Init / New game ===== */
+function toggleNumbersUI(){
+  const feats=featuresForLevel(level);
+  programPanel.classList.toggle('no-mods', !feats.numbers);
+  palNums.style.display = feats.numbers ? '' : 'none';
+}
+function newGame(resetLevel){
+  overlay.style.display='none';
+  if(resetLevel){ level=1; }
+  updateLevelLabel();
+
+  levelGrid = getLevelGrid(level).map(r=>r.slice());
+  buildGrid();
+  resetToLevelStart();
+
+  clearProgram();
+  renderPalette();
+  toggleNumbersUI();
+
+  status(resetLevel ? 'New game. Build your program.' : 'Level start. Build your program.');
+  nextLevelPending=false;
+}
+function onResize(){ buildGrid(); positionRobot(); if(carrying && flagIconEl) flagIconEl.style.display='none'; }
+addEventListener('resize', onResize);
+
+/* Boot */
+clearProgram(); buildGrid(); renderPalette(); updateLevelLabel(); renderFeatureList(); toggleNumbersUI(); newGame(true);
+
+/* Suppress default context menu on tiles (we handle right-click delete) */
+document.addEventListener('contextmenu', (e)=>{ const inTile=e.target.closest && e.target.closest('.tile'); if(inTile){ e.preventDefault(); } }, {capture:true});
+})();
+</script>
+</body>
+</html>
