@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Internal Council</title>
+  <meta name="description" content="A multi-voice reflection tool that simulates distinct inner perspectives to deepen understanding and improve decisions." />
+  <style>
+    * { box-sizing: border-box }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      margin: 28px; background:#f4f4f4; color:#111;
+      transition: background-color .25s ease, color .25s ease, border-color .25s ease;
+      max-width: 900px; margin-left:auto; margin-right:auto;
+    }
+    body.dark { background:#1f1f1f; color:#f5f5f5; }
+    a { color: inherit; }
+
+    header { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:12px }
+    .left { display:flex; align-items:center; gap:12px }
+    h1 { margin:0 0 6px }
+    .subtitle { margin:0; color:#666; font-size:14px }
+    body.dark .subtitle { color:#c9c9c9 }
+
+    /* HERO IMAGE — any ratio */
+    .hero {
+      width:100%;
+      height:auto;              /* keep natural aspect ratio */
+      object-fit: contain;      /* show full image if oversized container */
+      border-radius:12px;
+      display:block;
+      max-height:70vh;          /* optional: avoid overly tall images */
+    }
+
+    section { margin:18px 0 }
+    h2 { margin:0 0 8px; font-size:20px }
+    .meta { color:#666; font-size:12px; margin: 2px 0 10px }
+    body.dark .meta { color:#c9c9c9 }
+    code { background:#f0f0f0; padding:2px 6px; border-radius:6px }
+    body.dark code { background:#2a2a2a }
+
+    .card {
+      border:1px solid #e0e0e0; border-radius:12px; background:#fff;
+      padding:14px; transition: background .25s ease, border-color .25s ease;
+    }
+    body.dark .card { background:#222; border-color:#3a3a3a }
+
+    /* dark-mode switch (labels always black) */
+    .theme-switch {
+      position: relative; width: 90px; height: 32px; border-radius: 16px;
+      background:#ccc; border:1px solid #aaa; display:inline-flex; align-items:center;
+      justify-content:space-between; padding:0 10px; cursor:pointer; user-select:none; gap:6px;
+    }
+    .theme-switch span { font-size:12px; line-height:1; pointer-events:none; color:#000 }
+    .switch-dot {
+      position:absolute; top:2px; left:2px; width:28px; height:28px; border-radius:50%;
+      background:#fff; box-shadow:0 1px 2px rgba(0,0,0,.2); transition: transform .25s ease;
+    }
+    body.dark .switch-dot { transform: translateX(58px); }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="left">
+      <a href="../../">← Back to portfolio</a>
+    </div>
+    <div class="theme-switch" id="theme-switch" role="button" aria-label="Toggle dark mode" aria-pressed="false" tabindex="0">
+      <span>Light</span>
+      <div class="switch-dot"></div>
+      <span>Dark</span>
+    </div>
+  </header>
+
+  <!-- Project image saved in THIS folder -->
+  <img
+    class="hero"
+    src="./internal-council1.png"
+    alt="Internal Council preview"
+    onerror="this.onerror=null;this.src='../../images/default.png';"
+  >
+
+  <h1>Internal Council</h1>
+  <p class="meta">Work project · Multi-voice reflection to surface perspectives and make better decisions.</p>
+
+  <section class="card">
+    <h2>Overview</h2>
+    <p>
+      The Internal Council is a reflective tool: it simulates distinct “inner voices” (e.g., Inner Child,
+      Empath, Self-critic, Warrior, Executor, Sage, and Body) to explore situations from multiple angles.
+      By hearing each perspective in its own voice—without diluting or moderating—the user can separate
+      emotions, critique, advocacy, planning, wisdom, and bodily signals into clear threads before choosing
+      what to do next.
+    </p>
+  </section>
+
+  <section class="card">
+    <h2>How it works</h2>
+    <ol>
+      <li><strong>Describe the situation.</strong> The user provides a short narrative of what’s going on.</li>
+      <li><strong>Council goal-setting.</strong> The tool states what the exercise aims to help with (clarity, options, tradeoffs).</li>
+      <li><strong>One voice at a time.</strong> Each Council member responds in its own style—raw and unfiltered.</li>
+      <li><strong>Resonance check.</strong> The tool asks which responses resonate (or don’t) to refine direction.</li>
+      <li><strong>Next steps.</strong> Council collaborates to outline actions, scripts, boundaries, or experiments.</li>
+      <li><strong>Optional lenses.</strong> Invite other viewpoints (e.g., Stoic, coach, public-health lens) if helpful.</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2>Council members (examples)</h2>
+    <ul>
+      <li><strong>Inner Child</strong> — “I feel …” Raw emotions, needs, play, and creativity.</li>
+      <li><strong>Empath</strong> — “I can understand …” Interprets others’ motives and feelings.</li>
+      <li><strong>Self-critic</strong> — Quality control; surfaces hard truths and plausible external critiques.</li>
+      <li><strong>Warrior</strong> — Boundaries, self-respect, safety, and courage under pressure.</li>
+      <li><strong>Executor</strong> — Planning, tradeoffs, feasibility, and decision criteria.</li>
+      <li><strong>Sage</strong> — Big-picture patterns, long-term consequences, and values.</li>
+      <li><strong>Body</strong> — Somatic signals, regulation, and self-care prompts.</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>When to use it</h2>
+    <ul>
+      <li>Conflicted decisions (career, relationships, creative direction).</li>
+      <li>Debriefing emotionally charged meetings or feedback.</li>
+      <li>Boundary-setting and difficult conversations (prepare scripts).</li>
+      <li>Post-mortems: separate signals (facts vs. feelings vs. fears).</li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>How to use (typical flow)</h2>
+    <ol>
+      <li>Paste a short scenario or write 5–8 sentences of context.</li>
+      <li>Skim each member’s first pass; mark what resonates and what doesn’t.</li>
+      <li>Ask follow-ups (e.g., “What would be a respectful boundary here?”).</li>
+      <li>Collect concrete next steps (e.g., a one-paragraph plan or a short script).</li>
+    </ol>
+
+  </section>
+
+  <script>
+  // Dark-mode toggle (persists; respects system as default)
+  (() => {
+    const STORAGE_KEY = 'portfolioDarkMode';
+    const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    const shouldDark = saved === null ? prefersDark : saved === 'true';
+    if (shouldDark) document.body.classList.add('dark');
+
+    const btn = document.getElementById('theme-switch');
+    const setPressed = () => btn.setAttribute('aria-pressed', document.body.classList.contains('dark') ? 'true' : 'false');
+    setPressed();
+
+    function toggle() {
+      document.body.classList.toggle('dark');
+      localStorage.setItem(STORAGE_KEY, document.body.classList.contains('dark'));
+      setPressed();
+    }
+    btn.addEventListener('click', toggle);
+    btn.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+    });
+  })();
+  </script>
+</body>
+</html>
