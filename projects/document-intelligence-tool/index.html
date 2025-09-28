@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Document Intelligence Tool Demo — v2.8.3</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0e1523;--panel:#121c2d;--ink:#e8eef7;--muted:#2e3c55;--sub:#9db1cc;--accent:#69b6ff;
+      --ok:#90f0c3;--warn:#ffb86b;--danger:#ff7b7b;--shadow:0 10px 30px rgba(0,0,0,.35);
+      --left:55%; --right:45%; --headerH:120px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0e1523 0%,#0e1523 60%,#101a2b 100%);font:15px/1.45 system-ui,Segoe UI,Roboto,Arial;color:var(--ink)}
+    .container{width:96vw;margin:0 auto;padding:18px}
+    .header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;background:var(--panel);border:1px solid var(--muted);border-radius:14px;box-shadow:var(--shadow);padding:14px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:36px;height:36px;border-radius:10px;background:radial-gradient(100% 100% at 0% 0%,#7cc4ff 0%,#4aa8ff 50%,#2a8fff 100%)}
+    h1{margin:0;font-size:1.4rem;letter-spacing:.3px}
+    .subtitle{color:#bcd0ea;font-size:.9rem}
+    .help{width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:#0f1b2e;border:1px solid #33445f;color:#cfe5ff;cursor:pointer}
+    .steps{display:flex;gap:10px}
+    .step{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:999px;border:1px dashed var(--muted);color:#cfe5ff}
+    .step.active{border-style:solid;background:#0f1c2d}
+    .num{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;background:#1f2c41;border:1px solid #385174;font-size:.8rem}
+
+    /* RESIZABLE SPLIT LAYOUT */
+    .app{
+      display:grid;
+      grid-template-columns: var(--left) 6px var(--right);
+      align-items:start;
+      gap:0;
+      min-height: calc(100vh - var(--headerH) - 36px);
+    }
+    .resizer{
+      width:6px; cursor:col-resize; background:#1a2a42; border-left:1px solid #263a59; border-right:1px solid #263a59;
+      min-height: 100%;
+    }
+    .resizer:after{content:""; display:block; width:2px; height:100%; margin:0 auto; background:#2f4466; opacity:.7}
+
+    .card{background:var(--panel);border:1px solid var(--muted);border-radius:14px;box-shadow:var(--shadow);padding:14px}
+    .stack{display:grid;gap:12px}
+    .row{display:flex;align-items:center;justify-content:space-between}
+    .drop{height:56px;border:2px dashed #7aa0cc;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#a8bedb}
+    .drop.demoDisabled{pointer-events:none; user-select:none; opacity:.9}
+    .divider{height:1px;background:#2a3b55;margin:12px 0}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{appearance:none;border:0;border-radius:12px;padding:11px 14px;background:#cbd5e1;color:#0a1423;cursor:pointer;box-shadow:var(--shadow);transition:transform .2s ease,opacity .2s ease}
+    .btn:disabled{opacity:.6;cursor:not-allowed}
+    .btn.primary{background:linear-gradient(180deg,#77c7ff,#69aff7);color:#09121f}
+    .btn.ghost{background:transparent;border:1px solid #2e3c55;color:#e8eef7}
+    .btn.success{background:#abeec6;color:#082015;border:1px solid #7fd7a6}
+    .muted{color:#9db1cc}
+
+    .leftPane{height: calc(100vh - var(--headerH) - 36px); display:flex; flex-direction:column;}
+    #chatHistory{
+      flex:1; min-height:0;
+      overflow:auto;border-radius:12px;background:#0f1a2b;border:1px solid #2a3b55;padding:14px;
+      font-family:ui-monospace,Menlo,Consolas,monospace;color:#d8e6f9
+    }
+    textarea,input,select{width:100%;background:#0e192b;color:#e8eef7;border:1px solid #2a3b55;border-radius:12px;padding:10px}
+    #userInput{height:110px; resize:vertical}
+    .toolbar .btn{align-self:flex-start}
+
+    .rightPanel{display:grid;gap:14px;align-content:start}
+    .status{display:flex;align-items:center;gap:8px}
+    .box{width:18px;height:18px;border:2px solid #4b617f;border-radius:4px}
+    .spinner{width:18px;height:18px;border:2px solid #4b617f;border-top-color:#7cc4ff;border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .check{color:var(--ok)}
+    .item{border:1px solid #33445f;border-radius:12px;background:#101b2e}
+    .itemHeader{display:flex;align-items:center;gap:12px;padding:12px;cursor:pointer}
+    .icon{width:28px;height:28px;border-radius:8px;display:grid;place-items:center;background:#10223a;border:1px solid #2f4867;color:#bfe0ff}
+    .itemBody{overflow:hidden;max-height:0;transition:max-height .35s ease}
+    .item.open .itemBody{max-height:2000px}
+    .pill{border:1px solid #3c4f6b;border-radius:10px;font-size:.78rem;color:#98b2d6;padding:4px 8px}
+
+    /* pretty render */
+    .pretty{display:grid;gap:10px}
+    .section{border:1px solid #2a3b55;border-radius:10px;padding:10px;background:#0e192b}
+    .section h5{margin:0 0 6px;font-size:0.95rem;color:#dfeefe}
+    .kvs{display:grid;grid-template-columns:140px 1fr;gap:6px}
+    .tag{display:inline-block;border:1px solid #385174;border-radius:999px;padding:4px 8px;margin:3px;font-size:.85rem;color:#cfe2ff;background:#0f2037}
+    .bullets{margin:0;padding-left:18px}
+    .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .table{width:100%;border-collapse:collapse}
+    .table th,.table td{border:1px solid #2a3b55;padding:6px 8px;text-align:left}
+
+    .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#122036;border:1px solid #304561;padding:12px 14px;border-radius:12px;box-shadow:var(--shadow);color:#d9ebff;display:none;z-index:50}
+    .toast.show{display:block;animation:fade 2.8s ease forwards}
+    @keyframes fade{0%{opacity:0;transform:translateX(-50%) translateY(6px)}10%{opacity:1;transform:translateX(-50%) translateY(0)}90%{opacity:1}100%{opacity:0}}
+
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:60}
+    .modalContent{background:var(--panel);border:1px solid var(--muted);border-radius:14px;box-shadow:var(--shadow);padding:16px;max-width:520px;width:92%}
+    .closeX{float:right;cursor:pointer;color:#b9cce6}
+
+    @media (max-width:1000px){
+      .app{grid-template-columns: 100% 0 0}
+      .resizer{display:none}
+      .leftPane{height:auto}
+    }
+
+    /* Advanced read-only blocks */
+    .readonly{
+      font:12px/1.4 ui-monospace,Menlo,Consolas,monospace;
+      background:#0f1a2b;border:1px solid #2a3b55;border-radius:10px;padding:10px;color:#cfe2ff;white-space:pre-wrap
+    }
+    .advLabel{color:#9db1cc;font-size:.9rem}
+    .advGrid{display:grid;gap:10px}
+    .identityBox{height:70px}
+    .instructionBox{height:80px}
+    .instructionBox.custom{height:160px}
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header" id="appHeader">
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1 style="display:flex;align-items:center;gap:10px">
+            Document Intelligence Tool Demo — v2.8.3
+            <span class="help" title="How it works" onclick="openHelp()"><i class="fa-regular fa-circle-question"></i></span>
+          </h1>
+          <div class="subtitle">Turn documents into clear, structured deliverables</div>
+        </div>
+      </div>
+      <div class="steps" id="stepBar">
+        <div class="step active"><span class="num">1</span>Upload</div>
+        <div class="step active" id="step2Badge"><span class="num">2</span>Generate Deliverables</div>
+        <div class="step"><span class="num">3</span>Download</div>
+      </div>
+    </div>
+
+    <div class="app" id="split">
+      <!-- LEFT -->
+      <div class="card stack leftPane">
+        <div id="chatHistory">
+          <strong>Assistant:</strong> I have loaded the document:<br/><br/>
+          <em class="muted">
+            This area shows the raw contents of your uploaded document.<br/>
+            In the real app, the text from the file appears here so the assistant can analyze it.
+          </em>
+          <br/><br/>
+        </div>
+        <div class="divider"></div>
+        <div class="stack">
+          <label class="muted">Message to Assistant (optional)</label>
+          <textarea id="userInput" placeholder="Ask a question or add context…"></textarea>
+          <div class="toolbar">
+            <button id="sendBtn" class="btn ghost" onclick="sendFreeform()"><i class="fa-regular fa-paper-plane"></i> Send (demo)</button>
+          </div>
+          <div class="muted" id="statusLine">Demo: document is preloaded.</div>
+        </div>
+      </div>
+
+      <!-- RESIZER -->
+      <div class="resizer" id="resizer" role="separator" aria-orientation="vertical" aria-label="Resize panels"></div>
+
+      <!-- RIGHT -->
+      <div class="rightPanel">
+        <div class="card stack">
+          <div class="row">
+            <div class="step active"><span class="num">1</span>Upload</div>
+          </div>
+
+          <!-- Upload area is DISPLAY-ONLY in demo -->
+          <div id="dropZone" class="drop demoDisabled" aria-disabled="true">
+            <span id="dropLabel"><i class="fa-regular fa-file"></i> Uploaded: Dummy-Document.txt</span>
+          </div>
+        </div>
+
+        <div class="card stack">
+          <div class="row">
+            <div class="step"><span class="num">2</span>Generate Deliverables</div>
+            <button id="downloadAllBtn" class="btn ghost" disabled onclick="allAction()">Download All Items</button>
+          </div>
+          <div id="itemsList" class="stack"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <div class="modal" id="helpModal">
+    <div class="modalContent">
+      <span class="closeX" onclick="closeHelp()"><i class="fa-solid fa-xmark"></i></span>
+      <h3 style="margin:.2rem 0 8px">How it works</h3>
+      <div class="muted">
+        1) Document is preloaded. 2) Select and generate deliverables (demo placeholders). 3) Download buttons are disabled in this demo.
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ===== Helpers FIRST (so calls later won't fail) ===== */
+    function escapeHtml(str){ return String(str).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\"/g,"&quot;"); }
+    function formatBlocks(t){ return escapeHtml(t).replace(/```([\\s\\S]*?)```/g,(m,p)=>`<pre style="white-space:pre-wrap;background:#0f1a2b;border:1px solid #2a3b55;border-radius:12px;padding:12px">${escapeHtml(p.trim())}</pre>`); }
+    function el(tag, attrs={}, text){ const n=document.createElement(tag); Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v)); if(text!==undefined) n.textContent=text; return n; }
+    function listBullets(list){ const ul=el('ul',{class:'bullets'}); list.forEach(x=>{ if(present(x)) ul.appendChild(el('li',{},x)); }); return ul; }
+    function kv(pairs){ const box=el('div',{class:'kvs'}); Object.entries(pairs).forEach(([k,v])=>{ if(present(v)) { box.appendChild(el('div',{class:'muted'},k)); box.appendChild(el('div',{}, v)); } }); return box; }
+    function sectionKV(title, pairs){ const s=el('div',{class:'section'}); s.appendChild(el('h5',{},title)); s.appendChild(kv(pairs)); return s; }
+    function table(headers, rows){ const t=el('table',{class:'table'}); const thead=el('thead'); const tr=el('tr'); headers.forEach(h=>tr.appendChild(el('th',{},h))); thead.appendChild(tr); t.appendChild(thead); const tb=el('tbody'); rows.forEach(r=>{ if(r.some(c=>present(c))) { const row=el('tr'); r.forEach(c=>row.appendChild(el('td',{},c||''))); tb.appendChild(row); } }); t.appendChild(tb); return t; }
+    function toArr(v){ return Array.isArray(v)? v : (present(v) ? [v] : []); }
+    function toArrLoose(v){ if (Array.isArray(v)) return v; if (v==null) return []; return [v]; }
+    function present(v){ return typeof v==='string' ? v.trim().length>0 : (v!==undefined && v!==null); }
+    function pick(...vals){ for(const v of vals){ if(typeof v==='string' && v.trim()) return v.trim(); } return ""; }
+    function filterPairs(obj){ const out={}; Object.entries(obj).forEach(([k,v])=>{ if(present(v)) out[k]=v; }); return out; }
+    function clone(o){ return JSON.parse(JSON.stringify(o||{})); }
+    function showToast(msg){ const toast=document.getElementById('toast'); toast.textContent=msg; toast.className='toast show'; setTimeout(()=>toast.className='toast',2600); }
+    function updateStepBar(step){ const bar=document.getElementById('stepBar').children; [...bar].forEach((node,i)=>node.classList.toggle('active', i<=step-1)); }
+
+    /* ===== Catalog & prompt text (display-only) ===== */
+    const deliverables = [
+      { id:"summary",  title:"Summary", icon:"fa-regular fa-rectangle-list",
+        instruction:"Produce a concise executive summary and structured sections. Include key points, insights, and optional meeting metadata when present.",
+        schema:{deliverableType:"summary",version:"1.0",metadata:{docTitle:"",date:"",sourceNote:""},items:[],decisions:[],actions:[],takeaways:[]} },
+      { id:"highlights", title:"Highlights", icon:"fa-regular fa-star",
+        instruction:"Extract the top highlights and provide supporting quotes/snippets where available.",
+        schema:{deliverableType:"highlights",version:"1.0",metadata:{docTitle:"",date:""},highlights:[]} },
+      { id:"tags", title:"Tags", icon:"fa-solid fa-hashtag",
+        instruction:"Output tags and topical categories. Use lowercase single- or two-word terms.",
+        schema:{deliverableType:"tags",version:"1.0",metadata:{docTitle:"",date:""},tags:[],categories:[]} },
+      { id:"profiles", title:"Person Profiles", icon:"fa-regular fa-user",
+        instruction:'For each person, include: name, role, organization, stance on any key points (if any), personality (can be speculative), tone, goals (if any), and relationships (if any).',
+        schema:{deliverableType:"profiles",version:"1.0",metadata:{docTitle:"",date:""},people:[]} },
+      { id:"actions", title:"Action Items", icon:"fa-regular fa-square-check",
+        instruction:'Extract explicit action items only if clearly stated. If there are NO action items, output a single item with task set to "None" and leave other fields empty.',
+        schema:{deliverableType:"actions",version:"1.0",metadata:{docTitle:"",date:""},actionItems:[]} },
+      { id:"qa", title:"Q&A", icon:"fa-regular fa-circle-question",
+        instruction:"Generate Q&A pairs that help a reader quickly understand the document.",
+        schema:{deliverableType:"qa",version:"1.0",metadata:{docTitle:"",date:""},pairs:[]} },
+      { id:"custom", title:"Custom", icon:"fa-regular fa-squares",
+        instruction:"Provide your own instructions. Edit in the advanced panel.",
+        schema:{deliverableType:"custom",version:"1.0",metadata:{docTitle:"",date:""},payload:{ answer:"", rationale:"" }} }
+    ];
+
+    function preBlock(d){ return [
+      "You are producing a structured deliverable as JSON.",
+      "Return ONLY a single JSON object. No prose, no markdown, no code fences.",
+      "Conform to this schema exactly (all fields must exist; if unknown, use empty strings/arrays):",
+      JSON.stringify(d.schema),
+      "Adhere to: be faithful to the uploaded document; do not hallucinate.",
+      "Reject unknown keys; prefer the provided property names exactly.",
+      "If the document lacks a field, keep it present but empty.",
+      `Deliverable Type: ${d.id}`
+    ].join("\\n"); }
+    function postBlock(){ return "Ensure strictly valid JSON."; }
+    function defaultIdentity(){ return "You are a meticulous document analysis assistant."; }
+    function defaultInstructions(d){
+      if(d.id==="profiles"){ return "Extract people explicitly mentioned; include name, role, organization, stance (if any), personality, tone, goals (if any), and relationships (if any). Do NOT include quotes."; }
+      if(d.id==="actions"){ return 'Extract ONLY explicit actions. If none exist, output a single item with task set to "None" and leave other fields empty.'; }
+      if(d.id==="custom"){ return "What should the short title of this document be? Include why in the rationale."; }
+      return deliverables.find(x=>x.id===d.id).instruction;
+    }
+
+    /* ===== Demo state ===== */
+    let fileUploaded = true;
+    let docBase = "Dummy-Document";
+    let messages=[
+      {role:"system",content:"You are an assistant discussing an uploaded document."},
+      {role:"assistant",content:"I have loaded the document:\n<Demo document content is displayed in the left panel>"}
+    ];
+    const perItemState = {};
+    const allResults = {};
+    let anyRequested = false;
+
+    /* ===== Build UI ===== */
+    const itemsList=document.getElementById('itemsList');
+    const downloadAllBtn=document.getElementById('downloadAllBtn');
+    const headerEl=document.getElementById('appHeader');
+
+    function setHeaderH(){
+      const h = headerEl.offsetHeight || 120;
+      document.documentElement.style.setProperty('--headerH', h + 'px');
+    }
+    window.addEventListener('load', setHeaderH);
+    window.addEventListener('resize', setHeaderH);
+
+    function buildItems(){
+      itemsList.innerHTML='';
+      deliverables.forEach(d=>{
+        const identity = defaultIdentity();
+        const instr = defaultInstructions(d);
+        perItemState[d.id] = perItemState[d.id] || {status:'idle', json:null, identity, instructions: instr};
+
+        const readonlyPre = preBlock(d);
+        const readonlyPost = postBlock();
+
+        const wrapper=document.createElement('div');
+        wrapper.className='item';
+        wrapper.id=`item-${d.id}`;
+        const instrExtraClass = d.id==="custom" ? "instructionBox custom" : "instructionBox";
+
+        wrapper.innerHTML=`
+          <div class="itemHeader" onclick="toggleItem('${d.id}')">
+            <div class="icon"><i class="${d.icon}"></i></div>
+            <div style="flex:1">
+              <div style="font-weight:600">${d.title}</div>
+              <div class="muted" style="font-size:.9rem">${d.instruction.slice(0,120)}${d.instruction.length>120?'…':''}</div>
+            </div>
+            <div class="status" id="status-${d.id}">
+              <div class="box"></div>
+              <span class="muted" style="font-size:.85rem">Idle</span>
+            </div>
+          </div>
+          <div class="itemBody">
+            <div class="divider"></div>
+            <div class="stack" style="padding:0 12px 12px">
+              <div class="toolbar" id="actions-${d.id}">
+                <button class="btn primary" onclick="generateItem(event,'${d.id}')">Generate Item (demo)</button>
+              </div>
+
+              <div id="result-${d.id}" class="pretty" style="display:none"></div>
+
+              <details id="adv-${d.id}">
+                <summary style="list-style:none; cursor:pointer; padding:8px 0">
+                  <span class="pill"><i class="fa-solid fa-sliders"></i> Advanced</span>
+                </summary>
+
+                <div class="advGrid" style="padding-top:8px">
+                  <div class="advLabel">Prompt (display-only preamble)</div>
+                  <pre class="readonly">${escapeHtml(readonlyPre)}</pre>
+
+                  <div class="advLabel">Identity (editable)</div>
+                  <textarea id="ident-${d.id}" class="identityBox" spellcheck="false">${identity}</textarea>
+
+                  <div class="advLabel">Instructions (editable)</div>
+                  <textarea id="inst-${d.id}" class="${instrExtraClass}" spellcheck="false">${instr}</textarea>
+
+                  <div class="advLabel">Prompt (display-only ending)</div>
+                  <pre class="readonly">${escapeHtml(readonlyPost)}</pre>
+
+                  <div class="toolbar">
+                    <button class="btn" onclick="downloadOne('${d.id}')"><i class="fa-regular fa-file-lines"></i> Download Item</button>
+                    <button class="btn ghost" onclick="regenerateItem('${d.id}')"><i class="fa-solid fa-arrows-rotate"></i> Regenerate Item</button>
+                  </div>
+                </div>
+              </details>
+            </div>
+          </div>
+        `;
+        itemsList.appendChild(wrapper);
+      });
+      updateAllActionButton();
+    }
+    buildItems();
+
+    /* ===== Behavior ===== */
+    function toggleItem(id){ document.getElementById(`item-${id}`).classList.toggle('open'); }
+    function setStatus(id, mode, label){
+      const s=document.getElementById(`status-${id}`);
+      s.innerHTML='';
+      const icon=document.createElement('div');
+      if(mode==='idle'){icon.className='box'}
+      if(mode==='loading'){icon.className='spinner'}
+      if(mode==='done'){icon.innerHTML='<i class="fa-solid fa-square-check"></i>'; icon.className='check'}
+      const text=document.createElement('span'); text.className='muted'; text.style.fontSize='.85rem'; text.textContent=label;
+      s.appendChild(icon); s.appendChild(text);
+    }
+
+    function sendFreeform(){
+      const input=document.getElementById('userInput');
+      const text=input.value.trim(); if(!text) return;
+      const chatHistory=document.getElementById('chatHistory');
+      chatHistory.innerHTML+='<span class="muted"><strong>User:</strong> '+escapeHtml(text).replace(/\n/g,'<br/>')+'</span><br/>';
+      chatHistory.innerHTML+='<br/><strong>Assistant:</strong> <em>Demo mode — no live responses.</em><br/><br/>';
+      input.value='';
+      showToast('Demo: sending is disabled');
+    }
+
+    function generateItem(ev,id){
+      ev.stopPropagation();
+      const d=deliverables.find(x=>x.id===id);
+
+      const identity = (document.getElementById(`ident-${id}`)?.value || defaultIdentity()).trim();
+      const instructions = (document.getElementById(`inst-${id}`)?.value || defaultInstructions(d)).trim();
+      perItemState[id].identity = identity;
+      perItemState[id].instructions = instructions;
+
+      anyRequested = true;
+      updateAllActionButton();
+
+      setStatus(id,'loading','Generating…');
+      perItemState[id].status='loading';
+
+      const placeholder = JSON.parse(JSON.stringify(d.schema));
+      placeholder.version = "1.0";
+      placeholder.metadata = placeholder.metadata || {};
+      placeholder.metadata.docTitle = placeholder.metadata.docTitle || docBase;
+      placeholder.metadata.date = placeholder.metadata.date || new Date().toISOString().slice(0,10);
+      placeholder.__demo = { note: "Demo placeholder. No external API calls were made." };
+
+      if(d.id==="summary"){
+        placeholder.items = [{ heading:"Overview", bullets:["Demo-only content"], insight:"This is a simulated summary." }];
+        placeholder.takeaways = ["This interface demonstrates layout and downloads without backend calls."];
+      }
+      if(d.id==="highlights"){
+        placeholder.highlights = [{ title:"Key highlight", summary:"Example highlight (demo).", quotes:["\"Sample quote from the uploaded text\""] }];
+      }
+      if(d.id==="tags"){
+        placeholder.tags = ["demo","prototype"];
+        placeholder.categories = ["example"];
+      }
+      if(d.id==="profiles"){
+        placeholder.people = [{ name:"Sample Person", role:"Stakeholder", organization:"Acme Co.", stance:"Supportive", personality:"Concise", tone:"Neutral", goals:["Clarity"], relationships:["Works with Team A"] }];
+      }
+      if(d.id==="actions"){
+        placeholder.actionItems = [{ task:"Review document (demo)", owner:"You", due:"", priority:"Low", status:"Planned", notes:"Demo only" }];
+      }
+      if(d.id==="qa"){
+        placeholder.pairs = [{ q:"What is this?", a:"A demo-only placeholder without live AI calls.", confidence:0.9 }];
+      }
+      if(d.id==="custom"){
+        placeholder.payload = { answer:"Demo title suggestion", rationale:"Generated locally for preview purposes." };
+      }
+
+      perItemState[id].json=placeholder;
+      perItemState[id].status='done';
+      allResults[id]=placeholder;
+
+      renderResult(id, placeholder);
+      setStatus(id,'done','Ready');
+      document.getElementById('actions-'+id).style.display='none';
+      updateAllActionButton();
+      showToast(`${d.title} ready (demo)`);
+    }
+
+    function regenerateItem(id){
+      const actions=document.getElementById('actions-'+id);
+      actions.style.display='none';
+      perItemState[id].status='loading';
+      setStatus(id,'loading','Generating…');
+      generateItem({stopPropagation:()=>{}}, id);
+    }
+
+    function updateAllActionButton(){
+      const hasAnyResult = Object.keys(allResults).length > 0;
+      if(!anyRequested){
+        downloadAllBtn.textContent = "Generate All Items (demo)";
+        downloadAllBtn.classList.remove("ghost","success");
+        downloadAllBtn.classList.add("primary");
+        downloadAllBtn.disabled = false;
+      }else{
+        downloadAllBtn.textContent = "Download All Items";
+        downloadAllBtn.classList.remove("primary");
+        downloadAllBtn.classList.add(hasAnyResult ? "success" : "ghost");
+        downloadAllBtn.disabled = false; // clickable but does nothing
+      }
+    }
+
+    function allAction(){
+      if(!anyRequested){
+        anyRequested = true;
+        updateAllActionButton();
+        for(const d of deliverables){
+          const st = perItemState[d.id]?.status || 'idle';
+          if(st === 'idle'){ generateItem({stopPropagation:()=>{}}, d.id); }
+        }
+      }else{
+        showToast('Demo: downloads are disabled');
+      }
+    }
+
+    /* ===== Renderers ===== */
+    function renderResult(id, obj){
+      const r = document.getElementById('result-' + id);
+      r.style.display='block';
+      r.innerHTML = "";
+
+      const data = clone(obj);
+      delete data.version; delete data.generatedAt;
+
+      const type = (data.deliverableType||id).toLowerCase();
+      const renderer = {
+        summary: renderSummary,
+        highlights: renderHighlights,
+        tags: renderTags,
+        profiles: renderProfiles,
+        actions: renderActions,
+        qa: renderQA,
+        custom: renderCustom
+      }[type] || renderCustom;
+
+      renderer(r, data);
+    }
+
+    function renderSummary(container, data){
+      const meta = data.metadata || {};
+      const docPairs = filterPairs({
+        Title: pick(meta.docTitle, meta.title),
+        Date:  pick(meta.date),
+        Source:pick(meta.sourceNote, meta.source)
+      });
+      if(Object.keys(docPairs).length) container.appendChild(sectionKV("Document", docPairs));
+
+      const items = toArr(data.items);
+      if (items.length){
+        const wrap = el('div',{class:'section'});
+        wrap.appendChild(el('h5',{},'Key Sections'));
+        items.forEach(it=>{
+          const block = el('div',{style:'margin-bottom:8px'});
+          const heading = pick(it.heading, it.title, it.keyPoint, it.topic);
+          const bullets = toArr(it.bullets);
+          const insight  = pick(it.insight, it.summary, it.note, it.content);
+          if(heading) block.appendChild(el('div',{style:'font-weight:600'}, heading));
+          if(bullets.length) block.appendChild(listBullets(bullets));
+          if(insight) block.appendChild(el('div',{class:'muted',style:'margin-top:4px'}, insight));
+          if(block.childNodes.length) wrap.appendChild(block);
+        });
+        if(wrap.childNodes.length>1) container.appendChild(wrap);
+      }
+
+      const decisions = toArr(data.decisions).map(d=>{
+        if (typeof d === 'string') return d.trim();
+        const s1 = pick(d.decision, d.title, d.message);
+        const s2 = pick(d.rationale, d.reason);
+        return s1 ? (s2 ? `${s1} — ${s2}` : s1) : "";
+      }).filter(Boolean);
+      if(decisions.length){
+        const wrap = el('div',{class:'section'});
+        wrap.appendChild(el('h5',{},'Decisions'));
+        wrap.appendChild(listBullets(decisions));
+        container.appendChild(wrap);
+      }
+
+      const actions = toArr(data.actions).map(a=>({
+        task: pick(a.task, a.title),
+        owner: pick(a.owner, a.assignee),
+        due:   pick(a.due, a.deadline),
+        status:pick(a.status)
+      })).filter(row => row.task || row.owner || row.due || row.status);
+      if(actions.length){
+        const wrap = el('div',{class:'section'});
+        wrap.appendChild(el('h5',{},'Actions'));
+        wrap.appendChild(table(['Task','Owner','Due','Status'], actions.map(a=>[a.task||'',a.owner||'',a.due||'',a.status||''])));
+        container.appendChild(wrap);
+      }
+
+      const takeaways = toArr(data.takeaways).map(t=>{
+        if (typeof t === 'string') return t.trim();
+        const msg = pick(t.insight, t.message, t.summary);
+        const ev  = pick(t.evidence);
+        return msg ? (ev ? `${msg} — ${ev}` : msg) : "";
+      }).filter(Boolean);
+      if(takeaways.length){
+        const wrap = el('div',{class:'section'});
+        wrap.appendChild(el('h5',{},'Key Takeaways'));
+        wrap.appendChild(listBullets(takeaways));
+        container.appendChild(wrap);
+      }
+
+      const insights = toArr(data.insights).map(x=>typeof x==='string'?x:pick(x.insight,x.message,x.summary)).filter(Boolean);
+      if(insights.length){
+        const wrap = el('div',{class:'section'});
+        wrap.appendChild(el('h5',{},'Insights'));
+        wrap.appendChild(listBullets(insights));
+        container.appendChild(wrap);
+      }
+    }
+
+    function renderHighlights(container, data){
+      const meta = data.metadata || {};
+      const docPairs = filterPairs({ Title: pick(meta.docTitle, meta.title), Date: pick(meta.date) });
+      if(Object.keys(docPairs).length) container.appendChild(sectionKV("Document", docPairs));
+
+      const list = toArr(data.highlights).length ? toArr(data.highlights) : toArr(data.items);
+      if(!list.length) return;
+
+      const wrap = el('div',{class:'section'});
+      wrap.appendChild(el('h5',{},'Highlights'));
+
+      list.forEach(h=>{
+        const block = el('div',{style:'margin-bottom:8px'});
+        const ttl = pick(h.title, h.heading, h.highlight);
+        const sum = pick(h.summary, h.insight, h.note);
+        const quotes = toArr(h.quotes).length ? toArr(h.quotes)
+                     : toArr(h.snippets).length ? toArr(h.snippets)
+                     : toArrLoose(h.quote);
+        if(ttl) block.appendChild(el('div',{style:'font-weight:600'},ttl));
+        if(sum) block.appendChild(el('div',{},sum));
+        if(quotes.length){
+          const qwrap=el('div',{class:'muted',style:'margin-top:4px'}); quotes.forEach(q=>{ if(q) qwrap.appendChild(el('div',{},`“${q}”`)); }); block.appendChild(qwrap);
+        }
+        if(block.childNodes.length) wrap.appendChild(block);
+      });
+      if(wrap.childNodes.length>1) container.appendChild(wrap);
+    }
+
+    function renderTags(container, data){
+      const meta = data.metadata || {};
+      const docPairs = filterPairs({ Title: pick(meta.docTitle, meta.title), Date: pick(meta.date) });
+      if(Object.keys(docPairs).length) container.appendChild(sectionKV("Document", docPairs));
+
+      const tags = toArr(data.tags);
+      const cats = toArr(data.categories);
+
+      if(tags.length){
+        const s = el('div',{class:'section'});
+        s.appendChild(el('h5',{},'Tags'));
+        const tagBox=el('div',{}); tags.forEach(t=>tagBox.appendChild(el('span',{class:'tag'},t))); s.appendChild(tagBox);
+        if(cats.length){
+          s.appendChild(el('h5',{style:'margin-top:10px'},'Categories'));
+          const catBox=el('div',{}); cats.forEach(t=>catBox.appendChild(el('span',{class:'tag'},t))); s.appendChild(catBox);
+        }
+        container.appendChild(s);
+      }
+    }
+
+    function renderProfiles(container, data){
+      const meta = data.metadata || {};
+      const docPairs = filterPairs({ Title: pick(meta.docTitle, meta.title), Date: pick(meta.date) });
+      if(Object.keys(docPairs).length) container.appendChild(sectionKV("Document", docPairs));
+
+      const people = toArr(data.people);
+      if(!people.length) return;
+      const grid = el('div',{class:'grid2'});
+      people.forEach(p=>{
+        const card=el('div',{class:'section'});
+        card.appendChild(el('h5',{}, pick(p.name,'Unknown')));
+        const kvpairs = filterPairs({
+          Role: pick(p.role),
+          Org: pick(p.org, p.organization),
+          Stance: pick(p.stance),
+          Personality: pick(p.personality),
+          Tone: pick(p.tone)
+        });
+        if(Object.keys(kvpairs).length) card.appendChild(kv(kvpairs));
+        if(toArr(p.goals).length){ card.appendChild(el('h5',{style:'margin-top:8px'},'Goals')); card.appendChild(listBullets(toArr(p.goals))); }
+        if(toArr(p.relationships).length){ card.appendChild(el('h5',{style:'margin-top:8px'},'Relationships')); card.appendChild(listBullets(toArr(p.relationships))); }
+        grid.appendChild(card);
+      });
+      container.appendChild(grid);
+    }
+
+    function renderActions(container, data){
+      const meta = data.metadata || {};
+      const docPairs = filterPairs({ Title: pick(meta.docTitle, meta.title), Date: pick(meta.date) });
+      if(Object.keys(docPairs).length) container.appendChild(sectionKV("Document", docPairs));
+
+      let rows = [];
+      const items = toArr(data.actionItems);
+      if(items.length === 1 && typeof items[0] === 'string' && items[0].toLowerCase() === 'none'){
+        rows = [[ 'None', '', '', '', '', '' ]];
+      }else{
+        rows = items.map(a=>[
+          pick(a.task, a.title), pick(a.owner, a.assignee),
+          pick(a.due, a.deadline), pick(a.priority),
+          pick(a.status), pick(a.notes)
+        ]);
+      }
+      const hasContent = rows.some(r=>r.some(c=>present(c)));
+      if(hasContent) container.appendChild(table(['Task','Owner','Due','Priority','Status','Notes'], rows.map(r=>r.map(c=>c||''))));
+    }
+
+    function renderQA(container, data){
+      const meta = data.metadata || {};
+      const docPairs = filterPairs({ Title: pick(meta.docTitle, meta.title), Date: pick(meta.date) });
+      if(Object.keys(docPairs).length) container.appendChild(sectionKV("Document", docPairs));
+
+      const pairs = toArr(data.pairs);
+      if(!pairs.length) return;
+      const wrap=el('div',{class:'section'});
+      wrap.appendChild(el('h5',{},'Q&A'));
+      pairs.forEach(p=>{
+        const block=el('div',{style:'margin-bottom:10px'});
+        const q = pick(p.q, p.question);
+        const a = pick(p.a, p.answer);
+        if(q) block.appendChild(el('div',{style:'font-weight:600'}, `Q: ${q}`));
+        if(a) block.appendChild(el('div',{}, `A: ${a}`));
+        if(typeof p.confidence==='number') block.appendChild(el('div',{class:'muted',style:'font-size:.85rem'}, `Confidence: ${(p.confidence*100).toFixed(0)}%`));
+        if(block.childNodes.length) wrap.appendChild(block);
+      });
+      if(wrap.childNodes.length>1) container.appendChild(wrap);
+    }
+
+    function renderCustom(container, data){
+      const wrap=el('div',{class:'section'});
+      wrap.appendChild(el('h5',{}, 'Custom'));
+      const pre=el('pre',{class:'section',style:'white-space:pre-wrap'}, JSON.stringify(data,null,2));
+      wrap.appendChild(pre);
+      container.appendChild(wrap);
+    }
+
+    /* ===== Downloads disabled ===== */
+    function downloadOne(id){
+      const hasData = !!perItemState[id]?.json;
+      showToast(hasData ? 'Demo: downloads are disabled' : 'Nothing to download yet');
+    }
+    function downloadAll(){
+      showToast(Object.keys(allResults).length ? 'Demo: downloads are disabled' : 'No items to download');
+    }
+
+    /* ===== Resizer ===== */
+    (function initResizer(){
+      const split = document.getElementById('split');
+      const resizer = document.getElementById('resizer');
+      let dragging = false;
+      function onDown(e){ dragging = true; resizer.setPointerCapture?.(e.pointerId); }
+      function onMove(e){
+        if(!dragging) return;
+        const rect = split.getBoundingClientRect();
+        const x = Math.min(Math.max(e.clientX - rect.left, 120), rect.width - 120);
+        const leftPct = (x / rect.width) * 100;
+        document.documentElement.style.setProperty('--left', leftPct + '%');
+        document.documentElement.style.setProperty('--right', (100-leftPct) + '%');
+      }
+      function onUp(e){ dragging = false; resizer.releasePointerCapture?.(e.pointerId); }
+      resizer.addEventListener('pointerdown', onDown);
+      window.addEventListener('pointermove', onMove);
+      window.addEventListener('pointerup', onUp);
+    })();
+
+    /* ===== Expose ===== */
+    window.sendFreeform=sendFreeform;
+    window.generateItem=generateItem;
+    window.regenerateItem=regenerateItem;
+    window.downloadOne=downloadOne;
+    window.downloadAll=downloadAll;
+    window.toggleItem=toggleItem;
+    window.openHelp=()=>document.getElementById('helpModal').style.display='flex';
+    window.closeHelp=()=>document.getElementById('helpModal').style.display='none';
+    window.allAction=allAction;
+
+    updateStepBar(2);
+  </script>
+</body>
+</html>
