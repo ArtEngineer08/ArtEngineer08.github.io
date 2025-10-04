@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Crab Dash — 5-Day Planner (v1.4)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root{
+      --bg:#0e1523;--panel:#121c2d;--ink:#e8eef7;--muted:#2c3a56;--accent:#69b6ff;
+      --ok:#90f0c3;--warn:#ffcc7a;--danger:#ff8a8a;--shadow:0 10px 30px rgba(0,0,0,.35);
+      --tide:#6db8ff;--temp:#ffd466;--pop:#4aa8ff;--cloud:#ffffff;--wind:#ff72b6;--shade:#0a1120;
+      --alert-orange:#ff9c47;--alert-red:#ff5a5a;
+    }
+    *{box-sizing:border-box} html,body{height:100%}
+    body{margin:0;background:radial-gradient(1200px 600px at 10% -10%,#18304e 0,#0e1523 50%,#0b1324 100%);font:15px/1.45 system-ui,Segoe UI,Roboto,Arial;color:var(--ink)}
+    .container{max-width:1100px;margin:0 auto;padding:18px}
+    .header{display:flex;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--muted);border-radius:14px;box-shadow:var(--shadow);padding:14px;margin-bottom:14px}
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{width:38px;height:38px;border-radius:10px;background:radial-gradient(140% 140% at 0% 0%,#7cc4ff 0,#4aa8ff 45%,#2a8fff 75%)}
+    h1{margin:0;font-size:1.35rem;letter-spacing:.3px}
+    .sub{color:#bcd0ea;font-size:.92rem;margin-top:2px}
+    .rightHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+    .chip{border:1px solid var(--muted);border-radius:999px;padding:8px 10px;color:#d3e6ff;background:#0f1c2f}
+    .btn{appearance:none;border:0;border-radius:12px;padding:8px 12px;background:#cbd5e1;color:#0a1423;cursor:pointer;box-shadow:var(--shadow)}
+    .stack{display:flex;flex-direction:column;gap:14px}
+    .card{background:var(--panel);border:1px solid var(--muted);border-radius:14px;box-shadow:var(--shadow);padding:14px}
+    .card h3{margin:.1rem 0 .6rem;font-size:1.05rem}
+    .muted{color:#9db1cc}
+    .kvs{display:grid;grid-template-columns:140px 1fr;gap:8px}
+    .row{display:flex;justify-content:space-between;align-items:center}
+    .dayTabs{display:flex;gap:8px;flex-wrap:wrap}
+    .tab{padding:8px 10px;border:1px solid var(--muted);border-radius:10px;background:#0f1c2d;color:#cfe5ff;cursor:pointer}
+    .tab.active{background:#173055;border-color:#5a7aa8}
+    .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
+    .sparkWrap{position:relative}
+    .tooltip{position:absolute;pointer-events:none;background:#0f1c2f;border:1px solid #34507a;border-radius:8px;padding:10px 12px;color:#e8eef7;font-size:24px;box-shadow:var(--shadow);transform:translate(-50%,-110%);white-space:nowrap;display:none}
+    .legend{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .key{display:inline-flex;align-items:center;gap:6px;color:#cfe5ff}
+    .dot{width:10px;height:10px;border-radius:50%}
+    .d-tide{background:var(--tide)} .d-temp{background:var(--temp)} .d-pop{background:#4aa8ff} .d-cloud{background:#ffffff} .d-wind{background:var(--wind)}
+    .note{display:inline-block;padding:6px 10px;border-radius:10px;border:1px dashed #3b4c68;background:#0f1a2c;color:#b8c9e6;font-size:.9rem}
+    .footer{margin:12px auto 28px;color:#8eaad1}
+    .footer ul{margin:6px 0 0 20px;padding:0}
+    .err{background:#3a1616;border:1px solid #7a2b2b;color:#ffc7c7;border-radius:10px;padding:8px 10px}
+
+    .stacked-rows{display:flex;flex-direction:column;gap:10px}
+    .stacked-rows .block{border:1px dashed #31435f;border-radius:10px;padding:10px}
+    .stacked-rows .block .hdr{font-weight:700;margin-bottom:6px}
+
+    #alerts .tag{display:inline-block;margin:4px 6px 0 0;padding:8px 10px;border-radius:10px;font-weight:800}
+    #alerts .sev-advisory{background:rgba(255,156,71,.15);border:1px solid var(--alert-orange);color:var(--alert-orange)}
+    #alerts .sev-warning{background:rgba(255,90,90,.15);border:1px solid var(--alert-red);color:var(--alert-red)}
+    #alerts .sev-watch{background:rgba(255,156,71,.15);border:1px dashed var(--alert-orange);color:var(--alert-orange)}
+
+    /* Small screen tweaks (<512px): compact spacing, smaller location text */
+    @media (max-width: 512px){
+      .container{padding:10px}
+      .header{padding:10px;margin-bottom:10px}
+      .card{padding:10px}
+      .stack{gap:10px}
+      .chip{font-size:.85rem;padding:6px 8px}
+      .brand h1{font-size:1.15rem}
+      .sub{font-size:.85rem}
+      .legend{gap:6px}
+      .kvs{grid-template-columns:1fr;gap:6px}
+      #locText{font-size:.9rem}
+    }
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="brand">
+        <div class="logo"></div>
+        <div>
+          <h1 id="titleText">Crab Dash — 5-Day Planner <span class="mono" style="font-size:.85rem;color:#9db1cc">v1.4</span></h1>
+          <div id="subtitleText" class="sub">Weather Dashboard using the latest data from public API sources.</div>
+        </div>
+      </div>
+      <div class="rightHead">
+        <span class="chip" id="locChip"><i class="fa-solid fa-location-dot"></i> <span id="locText">Bellingham, WA</span></span>
+        <button class="btn" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
+      </div>
+    </div>
+
+    <!-- Day picker -->
+    <div class="card">
+      <div class="row">
+        <h3>Pick a Day</h3>
+        <div class="dayTabs" id="dayTabs"></div>
+      </div>
+      <div id="alerts" class="mono" style="margin-top:6px;font-size:1rem"></div>
+    </div>
+
+    <div class="stack">
+      <!-- Tide -->
+      <div class="card">
+        <div class="row">
+          <h3><i class="fa-solid fa-water"></i> Tide (ft)</h3>
+          <div class="legend">
+            <span class="key"><span class="dot d-tide"></span>Tide (9449424 · MLLW)</span>
+          </div>
+        </div>
+        <div class="sparkWrap">
+          <svg id="chartTide" class="chart" viewBox="0 0 900 240" style="width:100%;height:240px"></svg>
+          <div id="tipTide" class="tooltip"></div>
+        </div>
+        <div id="tideErr"></div>
+      </div>
+
+      <!-- Temp -->
+      <div class="card">
+        <div class="row">
+          <h3><i class="fa-solid fa-temperature-three-quarters"></i> Temperature (°F)</h3>
+          <div class="legend"><span class="key"><span class="dot d-temp"></span>Air Temp</span></div>
+        </div>
+        <div class="sparkWrap">
+          <svg id="chartTemp" class="chart" viewBox="0 0 900 240" style="width:100%;height:240px"></svg>
+          <div id="tipTemp" class="tooltip"></div>
+        </div>
+      </div>
+
+      <!-- Clouds & Rain -->
+      <div class="card">
+        <div class="row">
+          <h3><i class="fa-solid fa-cloud-sun-rain"></i> Clouds & Rain (%)</h3>
+          <div class="legend">
+            <span class="key"><span class="dot d-pop"></span>% Precip</span>
+            <span class="key"><span class="dot d-cloud"></span>% Cloud cover</span>
+          </div>
+        </div>
+        <div class="sparkWrap">
+          <svg id="chartPop" class="chart" viewBox="0 0 900 240" style="width:100%;height:240px"></svg>
+          <div id="tipPop" class="tooltip"></div>
+        </div>
+        <div id="chartErr"></div>
+      </div>
+
+      <!-- Wind -->
+      <div class="card">
+        <div class="row">
+          <h3><i class="fa-solid fa-wind"></i> Wind</h3>
+          <div class="legend"><span class="key"><span class="dot d-wind"></span>Speed & Direction</span></div>
+        </div>
+        <div class="sparkWrap">
+          <svg id="chartWind" class="chart" viewBox="0 0 900 240" style="width:100%;height:240px"></svg>
+          <div id="tipWind" class="tooltip"></div>
+        </div>
+      </div>
+
+      <!-- Light -->
+      <div class="card">
+        <h3><i class="fa-solid fa-sun"></i> Light (Sunrise & Sunset)</h3>
+        <div class="kvs" id="sunDusk"></div>
+        <div id="sunErr"></div>
+      </div>
+
+      <!-- Shore -->
+      <div class="card">
+        <h3><i class="fa-solid fa-cloud-sun-rain"></i> Shore Forecast (Selected Day)</h3>
+        <div class="kvs" id="weather"></div>
+        <div id="wxErr"></div>
+      </div>
+
+      <!-- Marine — stacked -->
+      <div class="card">
+        <div class="row">
+          <h3><i class="fa-solid fa-water"></i> Marine Forecast (CWF — PZZ133)</h3>
+        </div>
+        <div id="marine" class="stacked-rows" style="margin-bottom:10px"></div>
+        <div id="marineMsg" class="note" style="display:none"></div>
+      </div>
+
+      <!-- Notes -->
+      <div class="card">
+        <h3><i class="fa-solid fa-note-sticky"></i> Notes</h3>
+        <textarea id="notes" class="mono" style="width:100%;height:65px;background:#0f1c2f;color:#e8eef7;border:1px solid #2f476a;border-radius:10px;padding:10px" placeholder="Trip notes… traps, bait, launch ramp, crew, etc."></textarea>
+      </div>
+
+      <!-- Sources -->
+      <div class="footer mono card">
+        <strong>APIs used</strong>
+        <ul>
+          <li>NOAA CO-OPS Tides &amp; Currents — <code>/predictions</code> hourly tide curve &amp; hi/lo markers (station 9449424 Cherry Point, datum MLLW)</li>
+          <li>NWS Weather API — <code>/points</code> → <code>forecastHourly</code> for hourly temperature, precipitation probability, and wind</li>
+          <li>NWS Weather API — <code>/points</code> → <code>forecastGridData</code> for gridpoint <code>skyCover</code> (cloud cover %)</li>
+          <li>NWS Products — <code>/products/types/CWF/locations/SEW</code> &amp; <code>/products/{id}</code> for Coastal Waters Forecast (zone PZZ133)</li>
+          <li>Sunrise-Sunset — daily <code>/json</code> for sunrise &amp; sunset used for night-time shading</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ---------- CONFIG ---------- */
+const TZ = "America/Los_Angeles";
+const LAT = 48.7519, LON = -122.4787; // Bellingham
+const NOAA_TIDE_STATION = "9449424";  // Cherry Point (hourly supported)
+const MARINE_ZONE = "PZZ133";
+const WFO = "SEW";
+const DAYS = 5;
+
+/* ---------- RESPONSIVE ---------- */
+function isSmall(){ return window.innerWidth < 512; }
+function hourRange(){ return isSmall() ? {start:6,end:21} : {start:0,end:23}; }
+function applyResponsiveHeader(){
+  const t = document.getElementById('titleText');
+  const s = document.getElementById('subtitleText');
+  if(isSmall()){
+    t.innerHTML = 'Crab Dash <span class="mono" style="font-size:.85rem;color:#9db1cc">v1.4</span>';
+    s.textContent = 'Weather Dashboard';
+  }else{
+    t.innerHTML = 'Crab Dash — 5-Day Planner <span class="mono" style="font-size:.85rem;color:#9db1cc">v1.4</span>';
+    s.textContent = 'Weather Dashboard using the latest data from public API sources.';
+  }
+}
+window.addEventListener('resize', ()=>{ applyResponsiveHeader(); renderAll(); });
+
+/* ---------- STATE ---------- */
+let dayList = [];
+let activeIndex = 0;
+let cache = {
+  tideHourly:{}, tideHiLo:{}, hourlyFx:null, sun:{} , marine: null, alerts: null,
+  gridUrl:null, gridSkyCover: {} // per-day {h, v}
+};
+
+/* ---------- HELPERS ---------- */
+const logFetch = (url) => console.log(`🔎 fetch @ ${new Date().toLocaleString()} → ${url}`);
+async function jsonFetch(url, opts){
+  logFetch(url);
+  const r = await fetch(url, opts);
+  if(!r.ok) throw new Error(`${r.status} ${r.statusText}`);
+  return r.json();
+}
+function toClock(d){ return new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit',hour12:true,timeZone:TZ}).format(d); }
+function addKV(parent,label,value){
+  const l=document.createElement('div'); l.className='muted'; l.textContent=label;
+  const v=document.createElement('div'); v.textContent = (value===undefined||value===null||value==='')?'—':value;
+  parent.appendChild(l); parent.appendChild(v);
+}
+function hToLabel(h){ const hh=(Math.round(h)%12||12); return `${hh}${h<12?'am':'pm'}`; }
+function getCss(varName){ return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
+function parseWindSpeedUnit(s){
+  if(!s) return {v:null,u:' mph'};
+  const txt = String(s).toLowerCase();
+  const num = (txt.match(/\d+(\.\d+)?/g)||[]).map(Number);
+  if(/kts?|knots?/.test(txt)){
+    const v = num.length ? num[num.length-1] : null;
+    return {v, u:' kt'};
+  }
+  const v = num.length ? num[num.length-1] : null;
+  return {v, u:' mph'};
+}
+
+/* ---------- INIT ---------- */
+const dayTabs = document.getElementById('dayTabs');
+initDays(); loadStatic().then(()=>{ applyResponsiveHeader(); renderAll(); }).catch(e => console.error(e));
+
+function initDays(){
+  const today = new Date();
+  dayList = [...Array(DAYS)].map((_,i)=> {
+    const d = new Date(today); d.setHours(0,0,0,0); d.setDate(d.getDate()+i);
+    return d.toISOString().slice(0,10);
+  });
+  dayTabs.innerHTML='';
+  dayList.forEach((iso,i)=>{
+    const d = new Date(iso+"T00:00:00");
+    const b = document.createElement('button');
+    b.className = 'tab' + (i===0?' active':'');
+    b.textContent = d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
+    b.onclick = ()=>{ activeIndex=i; [...dayTabs.children].forEach((c,ix)=>c.classList.toggle('active',ix===i)); renderAll(); };
+    dayTabs.appendChild(b);
+  });
+}
+
+/* ---------- DATA FETCH ---------- */
+async function loadStatic(){
+  const meta = await jsonFetch(`https://api.weather.gov/points/${LAT},${LON}`, {headers:{"User-Agent":"crabdash/1.4"}});
+  const hourlyUrl = meta.properties.forecastHourly;
+  cache.gridUrl = meta.properties.forecastGridData;
+  cache.hourlyFx = (await jsonFetch(hourlyUrl, {headers:{"User-Agent":"crabdash/1.4"}})).properties.periods || [];
+  cache.marine  = await fetchMarineCWF(MARINE_ZONE, WFO);
+  cache.alerts  = await fetchNWSAlerts(MARINE_ZONE);
+}
+
+async function fetchTideHourly(iso){
+  if(cache.tideHourly[iso]) return cache.tideHourly[iso];
+  const base=`https://api.tidesandcurrents.noaa.gov/api/prod/datagetter`;
+  const begin = iso.replace(/-/g,'');
+  const next  = new Date(iso+"T00:00:00"); next.setDate(next.getDate()+1);
+  const end   = next.toISOString().slice(0,10).replace(/-/g,'');
+  const params = new URLSearchParams({
+    station: NOAA_TIDE_STATION, product:'predictions', datum:'MLLW',
+    time_zone:'lst_ldt', interval:'h', units:'english',
+    begin_date:begin, end_date:end, format:'json', application:'crabdash'
+  });
+  const url = `${base}?${params.toString()}`;
+  const j = await jsonFetch(url);
+  if(!Array.isArray(j.predictions) || !j.predictions.length) throw new Error('No tide predictions returned.');
+  const pts = j.predictions.filter(p=>p.t.startsWith(iso)).map(p=>{
+    const [,tm]=p.t.split(' '); const [hh]=tm.split(':').map(Number);
+    return {h:hh, v:parseFloat(p.v), tLocal:p.t};
+  });
+  cache.tideHourly[iso]=pts; 
+  return pts;
+}
+
+async function fetchTideHiLo(iso){
+  if(cache.tideHiLo[iso]) return cache.tideHiLo[iso];
+  const base=`https://api.tidesandcurrents.noaa.gov/api/prod/datagetter`;
+  const begin = iso.replace(/-/g,'');
+  const next  = new Date(iso+"T00:00:00"); next.setDate(next.getDate()+1);
+  const end   = next.toISOString().slice(0,10).replace(/-/g,'');
+  const params = new URLSearchParams({
+    station: NOAA_TIDE_STATION, product:'predictions', datum:'MLLW',
+    time_zone:'lst_ldt', interval:'hilo', units:'english',
+    begin_date:begin, end_date:end, format:'json', application:'crabdash'
+  });
+  const url = `${base}?${params.toString()}`;
+  const j = await jsonFetch(url);
+  const items = Array.isArray(j.predictions) ? j.predictions.filter(p=>p.t.startsWith(iso)) : [];
+  const markers = items.map(p=>{
+    const dt = p.t.split(' ')[1]; const [hh,mm] = dt.split(':').map(Number);
+    return { h: hh + mm/60, v: parseFloat(p.v), type: p.type }; // H or L
+  });
+  cache.tideHiLo[iso] = markers;
+  return markers;
+}
+
+async function fetchMarineCWF(zoneId, office){
+  const listUrl = `https://api.weather.gov/products/types/CWF/locations/${office}`;
+  const list = await jsonFetch(listUrl, {headers:{"User-Agent":"crabdash/1.4"}});
+  const id = list && list["@graph"] && list["@graph"][0] && list["@graph"][0].id;
+  if(!id) return [];
+  const prod = await jsonFetch(`https://api.weather.gov/products/${id}`, {headers:{"User-Agent":"crabdash/1.4"}});
+  const text = prod.productText || "";
+  const section = extractZoneSection(text, zoneId);
+  return parseCWFPeriods(section);
+}
+
+function extractZoneSection(text, zone){
+  const lines = text.split(/\r?\n/);
+  const startIdx = lines.findIndex(l => l.trim().startsWith(`${zone}-`));
+  if(startIdx === -1) return "";
+  let out = [];
+  for(let i=startIdx;i<lines.length;i++){
+    const line = lines[i];
+    if(i>startIdx && /^[A-Z]{3}\d{3}-/.test(line.trim())) break;
+    if(line.trim()==="$$") break;
+    out.push(line);
+  }
+  return out.join("\n");
+}
+
+function parseCWFPeriods(sectionText){
+  if(!sectionText) return [];
+  const body = sectionText.replace(/^.*?\n/, '');
+  const parts = body.split(/\n(?=\.[A-Z][A-Z0-9 \-]*\.\.\.)/);
+  const periods = [];
+  parts.forEach(chunk=>{
+    const m = chunk.match(/^\.(?<name>[A-Z0-9 \-]+)\.\.\.(?<rest>[\s\S]*)/);
+    if(m){
+      periods.push({
+        name: m.groups.name.trim(),
+        text: m.groups.rest.replace(/\n+/g,' ').replace(/\s+/g,' ').trim()
+      });
+    }else{
+      const txt = chunk.trim();
+      if(txt && !/^\s*$/.test(txt) && !txt.startsWith('$$')) {
+        periods.push({name:'Synopsis', text: txt.replace(/\s+/g,' ')});
+      }
+    }
+  });
+  return periods;
+}
+
+async function fetchNWSAlerts(zoneId){
+  const j = await jsonFetch(`https://api.weather.gov/alerts/active?zone=${zoneId}`, {headers:{"User-Agent":"crabdash/1.4"}});
+  return j.features || [];
+}
+
+/* ---- Gridpoint skyCover (% cloud cover) expansion to hourly ---- */
+async function fetchSkyCoverForDay(iso){
+  if(cache.gridSkyCover[iso]) return cache.gridSkyCover[iso];
+  if(!cache.gridUrl) return [];
+  const j = await jsonFetch(cache.gridUrl, {headers:{"User-Agent":"crabdash/1.4"}});
+  const sc = j.properties && j.properties.skyCover && j.properties.skyCover.values;
+  if(!Array.isArray(sc)) return [];
+  const out = [];
+  sc.forEach(entry=>{
+    const [start, dur] = String(entry.validTime).split('/');
+    const startDate = new Date(start);
+    const m = dur && dur.match(/^PT(\d+)H/);
+    const hours = m ? parseInt(m[1],10) : 1;
+    for(let i=0;i<hours;i++){
+      const t = new Date(startDate); t.setHours(t.getHours()+i);
+      const isoDay = t.toISOString().slice(0,10);
+      if(isoDay === iso){ out.push({ h: t.getHours(), v: Number(entry.value) }); }
+    }
+  });
+  const byH = {};
+  out.forEach(p=>{ byH[p.h]=p.v; });
+  const hours = Object.keys(byH).map(h=>({h:Number(h), v:byH[h]})).sort((a,b)=>a.h-b.h);
+  cache.gridSkyCover[iso] = hours;
+  return hours;
+}
+
+/* ---------- RENDER ---------- */
+async function renderAll(){
+  const iso = dayList[activeIndex];
+
+  // sunrise/sunset
+  try{
+    if(!cache.sun[iso]){
+      const sun = await jsonFetch(`https://api.sunrise-sunset.org/json?lat=${LAT}&lng=${LON}&date=${iso}&formatted=0`);
+      cache.sun[iso] = sun.results;
+    }
+  }catch(e){ document.getElementById('sunErr').innerHTML = `<div class="err mono">${e}</div>`; }
+
+  // alerts
+  const alertsBox = document.getElementById('alerts'); alertsBox.innerHTML='';
+  (cache.alerts||[]).forEach(a=>{
+    const sev = (a.properties.severity||'').toLowerCase();
+    const tag = document.createElement('span');
+    tag.className = 'tag ' + (sev.includes('warning') ? 'sev-warning' : (sev.includes('watch') ? 'sev-watch' : 'sev-advisory'));
+    const until = a.properties.ends ? ` (until ${new Date(a.properties.ends).toLocaleString(undefined,{hour:'numeric',minute:'2-digit',month:'short',day:'numeric',timeZone:TZ})})` : '';
+    tag.textContent = `${a.properties.event}${until}`;
+    alertsBox.appendChild(tag);
+  });
+  if(!alertsBox.childElementCount) {
+    const ok = document.createElement('span');
+    ok.className = 'tag';
+    ok.style.border = '1px solid #3a556f'; ok.style.color='#9db1cc'; ok.style.background='transparent'; ok.style.fontWeight='600';
+    ok.textContent = 'No active marine advisories.';
+    alertsBox.appendChild(ok);
+  }
+
+  // shore hourly for selected day
+  const wxBox = document.getElementById('weather'); wxBox.innerHTML='';
+  const d0 = new Date(iso+"T00:00:00"); const d1 = new Date(iso+"T23:59:59");
+  const hoursFx = (cache.hourlyFx||[]).filter(p=>{ const t=new Date(p.startTime); return t>=d0 && t<=d1; });
+  if(hoursFx.length){
+    const cleanTemp = hoursFx.map(h=>h.temperature).filter(v=>typeof v==='number');
+    const tMax = cleanTemp.length? Math.max(...cleanTemp):'—';
+    const tMin = cleanTemp.length? Math.min(...cleanTemp):'—';
+    addKV(wxBox,'Temp Range', `${tMin}–${tMax} °F`);
+    const first = hoursFx[0];
+    addKV(wxBox,'First Hour', `${first.shortForecast} • ${first.windSpeed || '—'} ${first.windDirection||''}`);
+  }else{
+    addKV(wxBox,'Status','No hourly forecast parsed');
+  }
+
+  // marine (PZZ133) — stacked blocks
+  const mBox = document.getElementById('marine'); mBox.innerHTML='';
+  const msg = document.getElementById('marineMsg'); msg.style.display='none';
+  const periods = cache.marine||[];
+  if(periods.length){
+    periods.slice(0,4).forEach(p=>{
+      const div = document.createElement('div');
+      div.className='block';
+      const h = document.createElement('div'); h.className='hdr'; h.textContent = p.name;
+      const t = document.createElement('div'); t.textContent = p.text;
+      div.appendChild(h); div.appendChild(t);
+      mBox.appendChild(div);
+    });
+  }else{
+    msg.textContent = "Could not parse PZZ133 from latest CWF.";
+    msg.style.display='inline-block';
+  }
+
+  // light panel
+  const sun = cache.sun[iso]; const lightBox = document.getElementById('sunDusk'); lightBox.innerHTML='';
+  let sunriseHour=6, sunsetHour=18;
+  if(sun){ 
+    const sunrise = new Date(new Date(sun.sunrise).toLocaleString('en-US',{timeZone:TZ}));
+    const sunset  = new Date(new Date(sun.sunset ).toLocaleString('en-US',{timeZone:TZ}));
+    addKV(lightBox,'Sunrise', toClock(sunrise));
+    addKV(lightBox,'Sunset',  toClock(sunset));
+    sunriseHour = sunrise.getHours() + sunrise.getMinutes()/60;
+    sunsetHour  = sunset.getHours()  + sunset.getMinutes()/60;
+  }
+
+  // series
+  try{
+    const r = hourRange();
+    const tide = (await fetchTideHourly(iso)).filter(p=>p.h>=r.start && p.h<=r.end);
+    const hilo = (await fetchTideHiLo(iso)).filter(p=>p.h>=r.start && p.h<=r.end+0.001);
+
+    const tSeries = hoursFx
+      .map(h=>({h:new Date(h.startTime).getHours(), v: (typeof h.temperature==='number'? h.temperature : null)}))
+      .filter(p=>p.v!==null && p.h>=r.start && p.h<=r.end);
+
+    const pSeries = hoursFx
+      .map(h=>({h:new Date(h.startTime).getHours(), v: (typeof (h.probabilityOfPrecipitation?.value)==='number'? h.probabilityOfPrecipitation.value : null)}))
+      .filter(p=>p.v!==null && p.h>=r.start && p.h<=r.end);
+
+    const skySeriesFull = await fetchSkyCoverForDay(iso);
+    const skySeries = skySeriesFull.filter(p=>p.h>=r.start && p.h<=r.end);
+
+    const windParsed = hoursFx.map(h=>{
+      const {v,u} = parseWindSpeedUnit(h.windSpeed);
+      return { h:new Date(h.startTime).getHours(), v, dir: h.windDirection || '—', unit:u };
+    }).filter(p=>p.v!==null && p.h>=r.start && p.h<=r.end);
+
+    const unitVotes = windParsed.reduce((m,o)=>((m[o.unit]=(m[o.unit]||0)+1),m),{});
+    const windUnit = Object.entries(unitVotes).sort((a,b)=>b[1]-a[1])[0]?.[0] || ' mph';
+
+    drawLineChart({
+      svgId:'chartTide', tipId:'tipTide', color:getCss('--tide'),
+      data:tide, yMode:'auto', unit:' ft', shade:{sunriseHour, sunsetHour}, snapPx:isSmall()?18:14, range:r,
+      markers: hilo
+    });
+    drawLineChart({
+      svgId:'chartTemp', tipId:'tipTemp', color:getCss('--temp'),
+      data:tSeries, yMode:'tight', unit:' °F', shade:{sunriseHour, sunsetHour}, snapPx:isSmall()?18:14, range:r
+    });
+    drawMultiChart({
+      svgId:'chartPop', tipId:'tipPop', shade:{sunriseHour, sunsetHour}, snapPx:isSmall()?18:14, unit:'%', range:r,
+      series: [
+        { name:'% Precip', color:getCss('--pop'),  data:pSeries },
+        { name:'% Cloud',  color:getCss('--cloud'), data:skySeries }
+      ]
+    });
+    drawLineChart({
+      svgId:'chartWind', tipId:'tipWind', color:getCss('--wind'),
+      data:windParsed.map(({h,v,dir})=>({h,v,dir})), yMode:'wind', unit:windUnit, shade:{sunriseHour, sunsetHour}, snapPx:isSmall()?18:14, range:r,
+      formatLabel:(pt)=> `${hToLabel(pt.h)} • ${pt.v} ${windUnit.trim()} • ${pt.dir}`
+    });
+
+  }catch(e){
+    document.getElementById('tideErr').innerHTML = `<div class="err mono">${e.message || e}</div>`;
+  }
+}
+
+/* ---------- CHARTS ---------- */
+/* 2x-tall graphs on small screens without horizontal stretching */
+function setupSvgSize(svg){
+  const Wvb = 900;
+  const Hvb = isSmall() ? 480 : 240;   // 2x taller on small screens
+  const Hcss = Hvb;                    // match CSS height to viewBox height
+
+  svg.setAttribute('viewBox', `0 0 ${Wvb} ${Hvb}`);
+  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet'); // maintain width mapping
+  svg.style.width = '100%';
+  svg.style.height = Hcss + 'px';
+
+  return { W: Wvb, H: Hvb };
+}
+
+
+function drawLineChart(options){
+  const {svgId, tipId, color, data, yMode, unit, shade, snapPx=12, formatLabel, markers, range} = options;
+  const svg = document.getElementById(svgId);
+  const {W, H} = setupSvgSize(svg);
+  const P = {l:48,r:48,t:18,b:36};
+  svg.innerHTML='';
+
+  const H0 = (range?.start ?? 0), H1 = (range?.end ?? 23);
+  const x = h => P.l + ((h-H0)/(H1-H0))*(W-P.l-P.r);
+
+  // sizes (double on small screens)
+  const AXIS_FONT = isSmall()?28:14;
+  const LINE_W = isSmall()?16:4;
+  const DOT_R  = isSmall()?18:4.5;
+  const MARK_R = isSmall()?28:7;
+  const MARK_SW= isSmall()?12:3;
+
+  // y-scale
+  let yMin, yMax;
+  if(yMode==='fixed01'){ yMin=0; yMax=100; }
+  else if(yMode==='wind'){
+    const vals = data.map(d=>d.v);
+    const dMax = vals.length? Math.max(...vals) : 0;
+    yMin = 0;
+    yMax = Math.max(20, Math.ceil(dMax + Math.max(2, dMax*0.15)));
+  } else {
+    const vals = data.map(d=>d.v);
+    const dMin = vals.length? Math.min(...vals) : 0;
+    const dMax = vals.length? Math.max(...vals) : 1;
+    const pad = yMode==='tight' ? Math.max(1, (dMax-dMin)*0.15) : Math.max(1, (dMax-dMin)*0.2);
+    yMin = Math.floor(dMin - pad);
+    yMax = Math.ceil (dMax + pad);
+    if(yMin===yMax){ yMin-=1; yMax+=1; }
+  }
+  const y = v => H-P.b - ((v - yMin)/(yMax-yMin))*(H-P.t-P.b);
+
+  const g = (tag, attrs) => { const el=document.createElementNS('http://www.w3.org/2000/svg', tag); for(const k in attrs) el.setAttribute(k, attrs[k]); return el; };
+
+  // Night shading
+  if(shade){
+    const shadeColor = 'rgba(10, 17, 32)';
+    const sx = (h) => x(Math.max(H0, Math.min(H1, h)));
+    if(H0 < (shade.sunriseHour||6)) svg.appendChild(g('rect',{x:sx(H0),y:P.t,width:Math.max(0,sx(Math.min(H1, shade.sunriseHour))-sx(H0)),height:H-P.t-P.b,fill:shadeColor}));
+    if(H1 > (shade.sunsetHour||18)) svg.appendChild(g('rect',{x:sx(Math.max(H0, shade.sunsetHour)),y:P.t,width:Math.max(0,sx(H1)-sx(Math.max(H0, shade.sunsetHour))),height:H-P.t-P.b,fill:shadeColor}));
+  }
+
+  // Grid & ticks
+  const tickStep = (H1-H0) <= 16 ? 2 : 3;
+  for(let h=H0; h<=H1; h+=tickStep){
+    svg.appendChild(g('line',{x1:x(h),y1:P.t,x2:x(h),y2:H-P.b,stroke:'#22324d','stroke-dasharray':'3 4'}));
+    const tx=g('text',{x:x(h),y:H-10,fill:'#9db1cc','text-anchor':'middle','font-size':String(AXIS_FONT)}); tx.textContent=(h%12||12)+(h<12?'a':'p'); svg.appendChild(tx);
+  }
+  const step = Math.max(1, Math.round( ( (yMax-yMin) || 6 ) / 6));
+  for(let v=yMin; v<=yMax; v+=step){
+    const yy=y(v); svg.appendChild(g('line',{x1:P.l-4,y1:yy,x2:W-P.r,y2:yy,stroke:'#22324d','stroke-dasharray':'3 4'}));
+    const tx=g('text',{x:P.l-8,y:yy+(AXIS_FONT/3),fill:'#9db1cc','text-anchor':'end','font-size':String(AXIS_FONT)}); tx.textContent=v; svg.appendChild(tx);
+  }
+
+  // Path & points
+  const pts = data.filter(d=>d.v!=null);
+  const path = pts.map((d,i)=>`${i?'L':'M'}${x(d.h)},${y(d.v)}`).join(' ');
+  if(path){
+    svg.appendChild(g('path',{d:path,fill:'none','stroke-width':String(LINE_W),stroke:color}));
+    pts.forEach(d=> svg.appendChild(g('circle',{cx:x(d.h),cy:y(d.v),r:String(DOT_R),fill:color})));
+  }
+
+  // Hi/Lo markers
+  if(Array.isArray(markers) && markers.length){
+    markers.forEach(m=>{
+      const cx = x(m.h), cy = y(m.v);
+      const dot = g('circle',{cx, cy, r:String(MARK_R), fill:"#0f1c2f", stroke:color, 'stroke-width':String(MARK_SW)});
+      dot.classList.add('marker');
+      dot.setAttribute('data-label', `${m.type==='H'?'High':'Low'} • ${hToLabel(m.h)} • ${m.v.toFixed(1)}${unit.trim()}`);
+      svg.appendChild(dot);
+    });
+  }
+
+  // Tooltip
+  const tip = document.getElementById(tipId);
+  const toCoords = (evt) => {
+    const rect = svg.getBoundingClientRect();
+    const cssX = evt.clientX - rect.left, cssY = evt.clientY - rect.top;
+    const pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
+    const inv = svg.getScreenCTM().inverse(); const s = pt.matrixTransform(inv);
+    return { svgX:s.x, cssX, cssY };
+  };
+  function showTip(cssX,cssY,label){ tip.style.left = cssX+'px'; tip.style.top = (cssY-12)+'px'; tip.style.display='block'; tip.textContent = label; }
+  function hideTip(){ tip.style.display='none'; }
+
+  const nearest = (svgX) => {
+    let bestH = H0, bestDx = Infinity;
+    for(let h=H0; h<=H1; h++){ const dx = Math.abs(svgX - x(h)); if(dx<bestDx){bestDx=dx; bestH=h;} }
+    if(bestDx > snapPx) return null;
+    const point = data.reduce((a,b)=> Math.abs(b.h-bestH) < Math.abs(a.h-bestH) ? b : a, data[0] || null);
+    return point ? {h:bestH, p:point} : null;
+  };
+  const labeler = (pt)=> options.formatLabel ? options.formatLabel(pt) : `${hToLabel(pt.h)} • ${pt.v}${unit}`;
+
+  const onMove = (evt) => {
+    const {svgX, cssX, cssY} = toCoords(evt);
+    const pick = nearest(svgX);
+    if(!pick){ hideTip(); return; }
+    showTip(cssX, cssY, labeler(pick.p));
+  };
+
+  svg.addEventListener('mousemove', onMove);
+  svg.addEventListener('pointermove', onMove);
+  svg.addEventListener('mouseleave', hideTip);
+
+  svg.querySelectorAll('circle.marker').forEach(el=>{
+    el.addEventListener('mousemove', (evt)=>{
+      const rect = svg.getBoundingClientRect();
+      const cssX = evt.clientX - rect.left, cssY = evt.clientY - rect.top;
+      showTip(cssX, cssY, el.getAttribute('data-label'));
+    });
+    el.addEventListener('mouseleave', hideTip);
+  });
+
+  svg.addEventListener('click', (evt)=>{
+    const {svgX, cssX, cssY} = toCoords(evt);
+    const pick = nearest(svgX);
+    if(!pick){ hideTip(); return; }
+    if(tip.style.display==='block'){ hideTip(); } else { showTip(cssX, cssY, labeler(pick.p)); }
+  });
+}
+
+/* Multi-series chart for % precip + % cloud cover */
+function drawMultiChart({svgId, tipId, series, unit, shade, snapPx=12, range}){
+  const svg = document.getElementById(svgId);
+  const {W, H} = setupSvgSize(svg);
+  const P = {l:48,r:48,t:18,b:36};
+  svg.innerHTML='';
+
+  const H0 = (range?.start ?? 0), H1 = (range?.end ?? 23);
+  const x = h => P.l + ((h-H0)/(H1-H0))*(W-P.l-P.r);
+
+  const AXIS_FONT = isSmall()?28:14;
+  const LINE_W = isSmall()?16:4;
+  const DOT_R  = isSmall()?18:4.5;
+
+  // y-scale fixed 0..100
+  const yMin=0, yMax=100;
+  const y = v => H-P.b - ((v - yMin)/(yMax-yMin))*(H-P.t-P.b);
+
+  const g = (tag, attrs) => { const el=document.createElementNS('http://www.w3.org/2000/svg', tag); for(const k in attrs) el.setAttribute(k, attrs[k]); return el; };
+
+  // Night shading
+  if(shade){
+    const shadeColor = 'rgba(10, 17, 32)';
+    const sx = (h) => x(Math.max(H0, Math.min(H1, h)));
+    if(H0 < (shade.sunriseHour||6)) svg.appendChild(g('rect',{x:sx(H0),y:P.t,width:Math.max(0,sx(Math.min(H1, shade.sunriseHour))-sx(H0)),height:H-P.t-P.b,fill:shadeColor}));
+    if(H1 > (shade.sunsetHour||18)) svg.appendChild(g('rect',{x:sx(Math.max(H0, shade.sunsetHour)),y:P.t,width:Math.max(0,sx(H1)-sx(Math.max(H0, shade.sunsetHour))),height:H-P.t-P.b,fill:shadeColor}));
+  }
+
+  // Grid & ticks
+  const tickStep = (H1-H0) <= 16 ? 2 : 3;
+  for(let h=H0; h<=H1; h+=tickStep){
+    svg.appendChild(g('line',{x1:x(h),y1:P.t,x2:x(h),y2:H-P.b,stroke:'#22324d','stroke-dasharray':'3 4'}));
+    const tx=g('text',{x:x(h),y:H-10,fill:'#9db1cc','text-anchor':'middle','font-size':String(AXIS_FONT)}); tx.textContent=(h%12||12)+(h<12?'a':'p'); svg.appendChild(tx);
+  }
+  for(let v=0; v<=100; v+=20){
+    const yy=y(v); svg.appendChild(g('line',{x1:P.l-4,y1:yy,x2:W-P.r,y2:yy,stroke:'#22324d','stroke-dasharray':'3 4'}));
+    const tx=g('text',{x:P.l-8,y:yy+(AXIS_FONT/3),fill:'#9db1cc','text-anchor':'end','font-size':String(AXIS_FONT)}); tx.textContent=v; svg.appendChild(tx);
+  }
+
+  // Series
+  series.forEach(s=>{
+    const pts = s.data.filter(d=>d.v!=null);
+    const path = pts.map((d,i)=>`${i?'L':'M'}${x(d.h)},${y(d.v)}`).join(' ');
+    if(path){
+      svg.appendChild(g('path',{d:path,fill:'none','stroke-width':String(LINE_W),stroke:s.color}));
+      pts.forEach(d=> svg.appendChild(g('circle', {cx:x(d.h), cy:y(d.v), r:String(DOT_R), fill:s.color})));
+    }
+  });
+
+  // Tooltip
+  const tip = document.getElementById(tipId);
+  const toCoords = (evt) => {
+    const rect = svg.getBoundingClientRect();
+    const cssX = evt.clientX - rect.left, cssY = evt.clientY - rect.top;
+    const pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
+    const inv = svg.getScreenCTM().inverse(); const s = pt.matrixTransform(inv);
+    return { svgX:s.x, cssX, cssY };
+  };
+  function showTip(cssX,cssY,label){ tip.style.left = cssX+'px'; tip.style.top = (cssY-12)+'px'; tip.style.display='block'; tip.textContent = label; }
+  function hideTip(){ tip.style.display='none'; }
+
+  const nearest = (svgX) => {
+    let bestH = H0, bestDx = Infinity;
+    for(let h=H0; h<=H1; h++){ const dx = Math.abs(svgX - x(h)); if(dx<bestDx){bestDx=dx; bestH=h;} }
+    if(bestDx > snapPx) return null;
+    const picks = series.map(s=>{
+      const p = s.data.reduce((a,b)=> Math.abs(b.h-bestH) < Math.abs((a?.h??-1)-bestH) ? b : a, null);
+      return p && Math.abs(p.h-bestH)<=0.51 ? {name:s.name, v:p.v} : null;
+    }).filter(Boolean);
+    return {h:bestH, picks};
+  };
+
+  const onMove = (evt) => {
+    const {svgX, cssX, cssY} = toCoords(evt);
+    const pick = nearest(svgX);
+    if(!pick){ hideTip(); return; }
+    const lines = [`${hToLabel(pick.h)}`].concat(pick.picks.map(p=> `${p.name}: ${Math.round(p.v)}${unit}`));
+    showTip(cssX, cssY, lines.join(' • '));
+  };
+
+  svg.addEventListener('mousemove', onMove);
+  svg.addEventListener('pointermove', onMove);
+  svg.addEventListener('mouseleave', hideTip);
+}
+
+/* ---------- REFRESH ---------- */
+setInterval(async ()=>{
+  try{
+    const meta = await jsonFetch(`https://api.weather.gov/points/${LAT},${LON}`, {headers:{"User-Agent":"crabdash/1.4"}});
+    const hourlyUrl = meta.properties.forecastHourly;
+    cache.gridUrl = meta.properties.forecastGridData;
+    cache.hourlyFx = (await jsonFetch(hourlyUrl, {headers:{"User-Agent":"crabdash/1.4"}})).properties.periods || [];
+    cache.marine = await fetchMarineCWF(MARINE_ZONE,WFO);
+    cache.alerts = await fetchNWSAlerts(MARINE_ZONE);
+    cache.gridSkyCover = {}; // invalidate daily cache (grid may update)
+    renderAll();
+  }catch(e){ console.warn('Periodic refresh failed', e); }
+}, 2*60*60*1000);
+
+applyResponsiveHeader();
+renderAll();
+</script>
+</body>
+</html>
