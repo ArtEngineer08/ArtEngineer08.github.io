@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="theme-color" content="#0e1523">
-<title>Crab Dash v2.4 — 5-Day Planner</title>
+<title>Crab Dash v2.4.1 — 5-Day Planner</title>
 <style>
 :root{--bg:#0e1523;--panel:#121c2d;--ink:#e8eef7;--border:#2c3a56;--muted:#9db1cc;--blue:#69b6ff;--tide:#6db8ff;--temp:#ffd466;--pop:#4aa8ff;--cloud:#fff;--wind:#ff72b6;--warn:#ffcc7a;--danger:#ff8a8a;--good:#90f0c3;--shadow:0 10px 30px #0005}
 *{box-sizing:border-box}
@@ -133,6 +133,12 @@ a{color:#a9d9ff}.footer{font-size:.87rem;color:var(--muted)}
 .freshness strong{color:#cfe5ff}
 #agentReportPage{max-width:1060px;margin:0 auto;padding:18px;color:#152437}
 #agentReportPage h1{font-size:1.5rem}
+#agentReportPage .report-download{display:inline-flex;align-items:center;justify-content:center;background:#134579;color:#fff;border:1px solid #123c66;border-radius:9px;padding:10px 16px;font-weight:700;text-decoration:none;min-height:43px}
+#agentReportPage .report-download:hover{background:#0b3561}
+#agentReportPage .report-download:focus-visible{outline:3px solid #1d75ca;outline-offset:3px}
+#agentReportPage .report-download[hidden]{display:none}
+#agentReportPage .report-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:12px 0}
+#agentReportPage .report-actions span{font-size:.9rem;color:#4b5a6a}
 #agentReportPage pre{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.4;font:13px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;background:#fff;padding:14px;border:1px solid #b9c4d2;border-radius:8px}
 body.report-mode{background:#f3f6fb;color:#152437}
 body.report-mode #crab-dash{display:none}
@@ -142,10 +148,10 @@ body.report-mode #agentReportPage{display:block}
 </style>
 </head>
 <body>
-<section id="agentReportPage" hidden aria-label="Crab Dash machine-readable report" data-report-status="loading"><h1>Crab Dash v2.4 — Complete 5-Day Report</h1><p>JavaScript-generated report for browser-capable agents. Wait until report-status is ready or partial.</p><pre id="agentReportText">REPORT_STATUS: LOADING</pre></section>
+<section id="agentReportPage" hidden aria-label="Crab Dash machine-readable report" data-report-status="loading"><h1>Crab Dash v2.4.1 — Complete 5-Day Report</h1><p>Wait until <code>data-report-status="ready"</code> or <code>"partial"</code>, then click the link below to save the complete generated report as a UTF-8 text file. The file contains exactly the same text shown on this page; no copying or transcription is needed.</p><div class="report-actions"><a id="downloadReport" class="report-download" hidden download>Download report (.txt)</a><span id="downloadReportStatus" role="status">Loading report data…</span></div><pre id="agentReportText">REPORT_STATUS: LOADING</pre></section>
 <main class="container" id="crab-dash" data-timezone="America/Los_Angeles" data-tide-station="9449424" data-marine-zone="PZZ133">
 <header class="header">
- <div class="brand"><div class="logo" aria-hidden="true"></div><div><h1>Crab Dash <span class="sub" style="font-size:.7em">v2.4</span></h1><div class="sub">5-day weather &amp; tide planner · Pacific time</div></div></div>
+ <div class="brand"><div class="logo" aria-hidden="true"></div><div><h1>Crab Dash <span class="sub" style="font-size:.7em">v2.4.1</span></h1><div class="sub">5-day weather &amp; tide planner · Pacific time</div></div></div>
  <div class="header-actions"><span class="chip">⌖ Cherry Point, WA</span><button class="btn" type="button" id="printBtn">Print</button><time class="selected-date" id="headerDate" aria-label="Selected forecast date"></time></div>
 </header>
 <div class="stack">
@@ -179,7 +185,7 @@ body.report-mode #agentReportPage{display:block}
 </main>
 <script>
 'use strict';
-const APP_NAME='CrabDash', APP_VERSION='2.4';
+const APP_NAME='CrabDash', APP_VERSION='2.4.1';
 const REPORT_MODE=new URLSearchParams(location.search).get('report')==='1';
 const TZ='America/Los_Angeles', LAT=48.87047, LON=-122.74875, STATION='9449424', MARINE_ZONE='PZZ133', WFO='SEW', DAYS=5;
 if(REPORT_MODE)document.body.classList.add('report-mode');
@@ -274,7 +280,7 @@ async function refreshWeather(){
 }
 function validDate(v){const d=v?new Date(v):null;return d&&Number.isFinite(d.getTime())?d:null;}
 function durationMs(duration){const m=/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/.exec(duration||'');return m?((Number(m[1]||0)*24+Number(m[2]||0))*60+Number(m[3]||0))*60000:0;}
-function tideURL(iso,interval){const params=new URLSearchParams({station:STATION,product:'predictions',datum:'MLLW',time_zone:'lst_ldt',interval,units:'english',begin_date:iso.replaceAll('-',''),end_date:iso.replaceAll('-',''),format:'json',application:`${APP_NAME}_v${APP_VERSION.replace('.', '_')}`});return `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?${params}`;}
+function tideURL(iso,interval){const params=new URLSearchParams({station:STATION,product:'predictions',datum:'MLLW',time_zone:'lst_ldt',interval,units:'english',begin_date:iso.replaceAll('-',''),end_date:iso.replaceAll('-',''),format:'json',application:`${APP_NAME}_v${APP_VERSION.replaceAll('.', '_')}`});return `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?${params}`;}
 function parseTideTime(s){const match=/^(\d{4}-\d{2}-\d{2})\s+(\d{2}):(\d{2})/.exec(s||'');return match?{iso:match[1],hour:Number(match[2])+Number(match[3])/60,hm:`${match[2]}:${match[3]}`}:null;}
 function dailySlot(kind,iso){return state.daily[kind][iso]??(state.daily[kind][iso]=emptySource());}
 function loadDay(iso){for(const kind of ['tide','events','sun'])if(state.daily[kind][iso]?.status==='error')delete state.daily[kind][iso];const tide=dailySlot('tide',iso),events=dailySlot('events',iso),sun=dailySlot('sun',iso);
@@ -560,6 +566,22 @@ function drawChart(id,series,opts){
 // Dismiss the one active tooltip when tapping outside the graphs.
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('.chart-wrap'))for(const entry of chartTipDismissals)entry.reset();});
 let chartResizePending=false;window.addEventListener('resize',()=>{if(chartResizePending)return;chartResizePending=true;requestAnimationFrame(()=>{chartResizePending=false;if(state.days.length){const iso=state.days[state.day];renderCharts(iso,getRows(iso));}});});
+// The export is a browser-local Blob of the already rendered report text.
+// An agent can click the normal download link and pass the resulting .txt file
+// directly to its cache script instead of copying the report into a command.
+let reportDownloadUrl=null;
+function syncReportDownload(status,text){
+ const link=$('downloadReport'),note=$('downloadReportStatus');
+ if(!link||!note)return;
+ const available=status==='READY'||status==='PARTIAL';
+ if(reportDownloadUrl){URL.revokeObjectURL(reportDownloadUrl);reportDownloadUrl=null;}
+ if(!available){link.hidden=true;link.removeAttribute('href');note.textContent='Loading report data…';return;}
+ reportDownloadUrl=URL.createObjectURL(new Blob([text],{type:'text/plain;charset=utf-8'}));
+ link.download=`CrabDash-v${APP_VERSION}-report-${state.days[0]}.txt`;
+ link.href=reportDownloadUrl;
+ link.hidden=false;
+ note.textContent=status==='PARTIAL'?'Partial report — some data sources are unavailable; errors are included in the file.':'Report ready — save this text file directly.';
+}
 // Browser-readable, plain-text report. It is intentionally not a server endpoint:
 // agents that do not run JavaScript must use a browser tool to access this.
 function reportSource(src,name){return `SOURCE ${freshnessLabel(src,name,true)}${src.at?` | last_success=${src.at.toISOString()}`:''}${src.issuedAt?` | issued_at=${src.issuedAt.toISOString()}`:''}`;}
@@ -638,7 +660,9 @@ function renderAgentReport(){
   for(const r of rows)lines.push(reportLine([['time',`${r.hm} ${r.zone}`],['tide_ft',r.tide?.toFixed(2)],['temp_F',r.temp],['rain_pct',r.pop],['cloud_pct',r.cloud],['shore_wind_mph',r.wind],['wind_dir',r.windDir||'—'],['wind_raw',r.windRaw||'—']]));
  }
  lines.push('');lines.push('END_CRAB_DASH_REPORT');
- output.textContent=lines.join('\n');
+ const reportText=lines.join('\n');
+ output.textContent=reportText;
+ syncReportDownload(status,reportText);
 }
 init();
 </script>
