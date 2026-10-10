@@ -1,781 +1,646 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <title>Crab Dash — 5-Day Planner (v1.4)</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    :root{
-      --bg:#0e1523;--panel:#121c2d;--ink:#e8eef7;--muted:#2c3a56;--accent:#69b6ff;
-      --ok:#90f0c3;--warn:#ffcc7a;--danger:#ff8a8a;--shadow:0 10px 30px rgba(0,0,0,.35);
-      --tide:#6db8ff;--temp:#ffd466;--pop:#4aa8ff;--cloud:#ffffff;--wind:#ff72b6;--shade:#0a1120;
-      --alert-orange:#ff9c47;--alert-red:#ff5a5a;
-    }
-    *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:radial-gradient(1200px 600px at 10% -10%,#18304e 0,#0e1523 50%,#0b1324 100%);font:15px/1.45 system-ui,Segoe UI,Roboto,Arial;color:var(--ink)}
-    .container{max-width:1100px;margin:0 auto;padding:18px}
-    .header{display:flex;align-items:center;justify-content:space-between;background:var(--panel);border:1px solid var(--muted);border-radius:14px;box-shadow:var(--shadow);padding:14px;margin-bottom:14px}
-    .brand{display:flex;align-items:center;gap:12px}
-    .logo{width:38px;height:38px;border-radius:10px;background:radial-gradient(140% 140% at 0% 0%,#7cc4ff 0,#4aa8ff 45%,#2a8fff 75%)}
-    h1{margin:0;font-size:1.35rem;letter-spacing:.3px}
-    .sub{color:#bcd0ea;font-size:.92rem;margin-top:2px}
-    .rightHead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
-    .chip{border:1px solid var(--muted);border-radius:999px;padding:8px 10px;color:#d3e6ff;background:#0f1c2f}
-    .btn{appearance:none;border:0;border-radius:12px;padding:8px 12px;background:#cbd5e1;color:#0a1423;cursor:pointer;box-shadow:var(--shadow)}
-    .stack{display:flex;flex-direction:column;gap:14px}
-    .card{background:var(--panel);border:1px solid var(--muted);border-radius:14px;box-shadow:var(--shadow);padding:14px}
-    .card h3{margin:.1rem 0 .6rem;font-size:1.05rem}
-    .muted{color:#9db1cc}
-    .kvs{display:grid;grid-template-columns:140px 1fr;gap:8px}
-    .row{display:flex;justify-content:space-between;align-items:center}
-    .dayTabs{display:flex;gap:8px;flex-wrap:wrap}
-    .tab{padding:8px 10px;border:1px solid var(--muted);border-radius:10px;background:#0f1c2d;color:#cfe5ff;cursor:pointer}
-    .tab.active{background:#173055;border-color:#5a7aa8}
-    .mono{font-family:ui-monospace,Menlo,Consolas,monospace}
-    .sparkWrap{position:relative}
-    .tooltip{position:absolute;pointer-events:none;background:#0f1c2f;border:1px solid #34507a;border-radius:8px;padding:10px 12px;color:#e8eef7;font-size:24px;box-shadow:var(--shadow);transform:translate(-50%,-110%);white-space:nowrap;display:none}
-    .legend{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .key{display:inline-flex;align-items:center;gap:6px;color:#cfe5ff}
-    .dot{width:10px;height:10px;border-radius:50%}
-    .d-tide{background:var(--tide)} .d-temp{background:var(--temp)} .d-pop{background:#4aa8ff} .d-cloud{background:#ffffff} .d-wind{background:var(--wind)}
-    .note{display:inline-block;padding:6px 10px;border-radius:10px;border:1px dashed #3b4c68;background:#0f1a2c;color:#b8c9e6;font-size:.9rem}
-    .footer{margin:12px auto 28px;color:#8eaad1}
-    .footer ul{margin:6px 0 0 20px;padding:0}
-    .err{background:#3a1616;border:1px solid #7a2b2b;color:#ffc7c7;border-radius:10px;padding:8px 10px}
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0e1523">
+<title>Crab Dash v2.4 — 5-Day Planner</title>
+<style>
+:root{--bg:#0e1523;--panel:#121c2d;--ink:#e8eef7;--border:#2c3a56;--muted:#9db1cc;--blue:#69b6ff;--tide:#6db8ff;--temp:#ffd466;--pop:#4aa8ff;--cloud:#fff;--wind:#ff72b6;--warn:#ffcc7a;--danger:#ff8a8a;--good:#90f0c3;--shadow:0 10px 30px #0005}
+*{box-sizing:border-box}
+html{color-scheme:dark}
+body{margin:0;background:radial-gradient(1200px 600px at 10% -10%,#18304e 0,#0e1523 50%,#0b1324 100%);color:var(--ink);font:15px/1.45 system-ui,Segoe UI,Roboto,Arial,sans-serif}
+button{font:inherit}
+button{cursor:pointer}
+button:focus-visible,svg:focus-visible,summary:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:3px}
+.container{max-width:1100px;margin:auto;padding:18px}
+.header,.card{background:var(--panel);border:1px solid var(--border);border-radius:14px;box-shadow:var(--shadow);padding:14px}
+.header{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px;position:sticky;top:0;z-index:30;isolation:isolate;background:#121c2d;box-shadow:0 6px 20px #0009}
+.brand{display:flex;align-items:center;gap:12px;min-width:0}
+.logo{flex:none;width:38px;height:38px;border-radius:10px;background:radial-gradient(140% 140% at 0% 0%,#7cc4ff 0,#4aa8ff 45%,#2a8fff 75%)}
+h1{margin:0;font-size:1.35rem;letter-spacing:.3px}
+h2{font-size:1.05rem;line-height:1.35;margin:0 0 10px}
+h3{font-size:.98rem;margin:0 0 7px}
+p{margin:6px 0}
+.sub,.muted{color:var(--muted)}.sub{font-size:.91rem}
+.header-actions{display:flex;gap:7px;align-items:center;flex-wrap:nowrap;justify-content:flex-end;min-width:0}
+.chip{display:inline-flex;align-items:center;gap:6px;color:#d3e6ff;background:#0f1c2f;border:1px solid var(--border);border-radius:999px;padding:8px 10px;white-space:nowrap}
+.btn{border:1px solid #8493aa;background:#cbd5e1;color:#0a1423;font-weight:600;border-radius:10px;padding:8px 12px}
+.btn-secondary{background:#0f1c2f;border:1px solid #456086;color:#d3e6ff}
+.btn:hover{filter:brightness(1.12)}
+.selected-date{border:1px solid #52799d;background:#1b3551;color:#f2f8ff;font-weight:700;font-size:.89rem;padding:8px 11px;border-radius:10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.stack{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+.card{min-width:0}
+.toolbar{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap}
+.day-tabs{display:flex;flex-wrap:wrap;gap:6px}
+.tab{border:1px solid #40516e;border-radius:10px;background:#0f1c2f;color:#cfe5ff;padding:8px 11px}
+.tab[aria-pressed=true]{background:#173b69;border-color:#7bbcff;color:white}
+.control-line{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
+.state{font-size:.89rem;color:var(--muted)}.state.error{color:var(--danger)}.state.loading{color:#b9d8f8}
+.alerts-card{border-color:#40516e}
+.alerts-heading{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.alerts-heading h2{margin-bottom:4px}
+.alert-detail{margin-top:8px;padding:13px;border:1px solid #a96d37;border-radius:10px;background:#2b221f}
+.alert-detail.severe{border-color:#cc5b5b;background:#2b1d24}
+.alert-detail h3{color:#ffcc8d;margin:0 0 5px;font-size:1.01rem}
+.alert-detail.severe h3{color:#ffaaaa}
+.alert-meta{font-size:.88rem;color:#e6ba9a;margin:0 0 9px}
+.alert-copy{white-space:pre-line;overflow-wrap:anywhere;line-height:1.55;margin:8px 0;color:var(--ink)}
+.alert-instruction{margin-top:10px;padding-top:10px;border-top:1px solid #6c5148}
+.alert-detail a{display:inline-block;margin-top:7px;font-weight:650}
+.now-key{color:#ffe066;font-weight:650}
+.summary-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.current-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.current-stat{border:1px solid #37506e;background:#12253b;border-radius:10px;padding:10px;min-width:0}
+.current-stat .stat-value{font-size:1.28rem;white-space:normal}
+.current-status{font-size:.84rem;color:var(--muted);margin-top:8px;line-height:1.4}
+.stat{border:1px solid #31435f;background:#0f1a2b;border-radius:10px;padding:10px;min-width:0}
+.stat-label{font-size:.82rem;color:var(--muted)}.stat-value{font-size:1.08rem;font-weight:700;margin-top:4px;overflow-wrap:anywhere}
+.events{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.event{border:1px solid #375477;border-radius:10px;padding:7px 10px;background:#0f1c2f}
+.event strong{color:#a9d9ff}.event time{font-variant-numeric:tabular-nums}
+.heading-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+.heading-row h2{margin:0}.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:.9rem;color:#cfe5ff}.key{display:inline-flex;align-items:center;gap:6px}.dot{width:10px;height:10px;display:inline-block;border-radius:50%}
+.chart-wrap{position:relative;min-width:0}.chart{width:100%;height:235px;display:block;touch-action:pan-y;max-width:100%}
+.chart-readout{margin-top:4px;font-size:.88rem;color:#c9d9ef;min-height:21px}
+/* One finger-friendly tooltip per graph: large type, no native SVG titles. */
+.chart-tooltip{position:absolute;left:0;top:0;z-index:50;display:none;max-width:min(92%,300px);min-width:120px;padding:9px 13px;border:2px solid #84b5ef;border-radius:12px;background:#071324;color:#fff;box-shadow:0 6px 22px #000d;text-align:center;pointer-events:none;transform:translateX(-50%);font-variant-numeric:tabular-nums;line-height:1.14}
+.chart-tooltip.visible{display:block}
+.chart-tip-time{color:#c7dfff;font-size:14px;font-weight:700;white-space:nowrap;margin-bottom:5px}
+.chart-tip-value{font-size:clamp(19px,2.8vw,25px);font-weight:800;white-space:normal}
+.chart-tooltip[data-kind="now"]{border-color:#ffe066}
+.chart-tooltip[data-kind="event"]{border-color:#6db8ff}
+.chart:focus{outline:none}.chart:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+@media(max-width:420px){.chart-tooltip{padding:8px 10px;max-width:94%}.chart-tip-time{font-size:13px}.chart-tip-value{font-size:22px}}
+@media print{.chart-tooltip{display:none!important}}
+.small-note{font-size:.83rem;color:var(--muted);margin-top:6px}
+.kvs{display:grid;grid-template-columns:150px 1fr;gap:7px 14px}.kvs dt{color:var(--muted)}.kvs dd{margin:0;min-width:0}
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.period{border:1px dashed #38506c;border-radius:10px;padding:10px;margin-top:8px}.period h3{margin-bottom:4px}.period p{margin:0}
+.details{margin-top:12px;border-top:1px solid #354563;padding-top:10px}
+summary{cursor:pointer;font-weight:650;color:#cfe5ff;list-style-position:inside}
+.table-scroll{width:100%;overflow-x:auto;margin-top:10px;border:1px solid #354563;border-radius:9px}
+table{border-collapse:collapse;width:100%;min-width:650px;font-size:.92rem;font-variant-numeric:tabular-nums}
+caption{color:var(--muted);text-align:left;padding:9px 10px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid #2a3a53;white-space:nowrap}th{background:#1a2a43;color:#d3e6ff;position:sticky;top:0}tr:last-child td{border-bottom:0}tbody tr:hover{background:#18304b}
+.note{padding:8px 10px;border-radius:9px;border:1px dashed #3b4c68;color:#b8c9e6;background:#0f1a2c;font-size:.9rem}
 
-    .stacked-rows{display:flex;flex-direction:column;gap:10px}
-    .stacked-rows .block{border:1px dashed #31435f;border-radius:10px;padding:10px}
-    .stacked-rows .block .hdr{font-weight:700;margin-bottom:6px}
+a{color:#a9d9ff}.footer{font-size:.87rem;color:var(--muted)}
+.footer h2{color:var(--ink);margin:0 0 10px}
+.source-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 20px;list-style:none;padding:0;margin:0}
+.source-list li{min-width:0;border-left:2px solid #45688f;padding-left:10px}
+.source-list strong{display:block;color:#d4e6ff;font-size:.91rem;margin-bottom:2px}
+.source-list span{display:block;line-height:1.4}
+.source-list code{padding:1px 4px;color:#cce3ff;background:#0f1c2f;border-radius:4px;overflow-wrap:anywhere}
+.source-list a{font-weight:650}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+@media(max-width:950px){.summary-grid,.current-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){
+ .container{padding:10px}.header,.card{padding:11px}.stack{gap:10px}
+ .header{flex-wrap:wrap;row-gap:7px}.header-actions{width:100%;justify-content:flex-start}
+ .summary-grid,.current-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+ .two-col,.source-list{grid-template-columns:1fr}.kvs{grid-template-columns:125px 1fr}
+ .heading-row{align-items:flex-start}.legend{gap:6px}
+}
+@media(max-width:420px){
+ .container{padding:7px}.header,.card{padding:9px}.header{margin-bottom:9px;gap:6px}
+ .brand{gap:8px}.logo{width:30px;height:30px;border-radius:8px}
+ h1{font-size:1.14rem}.sub{font-size:.78rem}
+ .header-actions{gap:5px}.chip,.selected-date{font-size:.73rem;padding:6px 7px}
+ .btn{font-size:.75rem;padding:6px 8px}
+ .summary-grid,.current-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .stat,.current-stat{padding:9px}.stat-value{font-size:1rem}.current-stat .stat-value{font-size:1.13rem}
+ .kvs{grid-template-columns:90px 1fr}.day-tabs{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+ .tab{padding:8px 2px;font-size:.75rem}.heading-row h2{font-size:1rem}
+ .legend{font-size:.78rem}.source-list{gap:12px}
+}
+@media(max-width:330px){
+ .container{padding:5px}.header,.card{padding:8px}.header-actions{gap:4px}
+ .chip,.selected-date{font-size:.69rem;padding:6px 5px}.btn{font-size:.71rem;padding:6px 6px}
+ .brand .sub{font-size:.73rem}
+}
+@media print{body{background:#fff;color:#111}.header,.card{position:static;background:#fff;color:#111;box-shadow:none;border-color:#bbb}.sub,.muted,.state,.small-note,.chart-readout{color:#444}.tab,.btn{display:none}.card{break-inside:avoid}.chart{height:190px}svg text{fill:#333!important}.footer{color:#444}.table-scroll{overflow:visible}table{min-width:0}.details:not([open]){display:none}}
 
-    #alerts .tag{display:inline-block;margin:4px 6px 0 0;padding:8px 10px;border-radius:10px;font-weight:800}
-    #alerts .sev-advisory{background:rgba(255,156,71,.15);border:1px solid var(--alert-orange);color:var(--alert-orange)}
-    #alerts .sev-warning{background:rgba(255,90,90,.15);border:1px solid var(--alert-red);color:var(--alert-red)}
-    #alerts .sev-watch{background:rgba(255,156,71,.15);border:1px dashed var(--alert-orange);color:var(--alert-orange)}
-
-    /* Small screen tweaks (<512px): compact spacing, smaller location text */
-    @media (max-width: 512px){
-      .container{padding:10px}
-      .header{padding:10px;margin-bottom:10px}
-      .card{padding:10px}
-      .stack{gap:10px}
-      .chip{font-size:.85rem;padding:6px 8px}
-      .brand h1{font-size:1.15rem}
-      .sub{font-size:.85rem}
-      .legend{gap:6px}
-      .kvs{grid-template-columns:1fr;gap:6px}
-      #locText{font-size:.9rem}
-    }
-  </style>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+.status-brief{display:flex;align-items:center;justify-content:flex-end;gap:6px 12px;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
+.status-brief .bad{color:var(--danger);font-weight:700}
+.status-brief .loading{color:var(--warn)}
+.freshness-details{margin-top:5px;font-size:.82rem;color:var(--muted)}
+.freshness-details summary{font-weight:500;font-size:.82rem}
+.freshness{font-size:.81rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 13px;margin-top:5px}
+.freshness .fresh-item{white-space:normal}
+.freshness .stale{color:var(--danger);font-weight:700}
+.freshness .loading{color:var(--warn)}
+.freshness strong{color:#cfe5ff}
+#agentReportPage{max-width:1060px;margin:0 auto;padding:18px;color:#152437}
+#agentReportPage h1{font-size:1.5rem}
+#agentReportPage pre{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.4;font:13px/1.4 ui-monospace,SFMono-Regular,Consolas,monospace;background:#fff;padding:14px;border:1px solid #b9c4d2;border-radius:8px}
+body.report-mode{background:#f3f6fb;color:#152437}
+body.report-mode #crab-dash{display:none}
+body.report-mode #agentReportPage{display:block}
+@media(max-width:420px){#agentReportPage{padding:8px}#agentReportPage pre{font-size:11px;padding:8px}.freshness{font-size:.75rem}}
+@media print{#agentReportPage pre{white-space:pre-wrap}}
+</style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <div class="brand">
-        <div class="logo"></div>
-        <div>
-          <h1 id="titleText">Crab Dash — 5-Day Planner <span class="mono" style="font-size:.85rem;color:#9db1cc">v1.4</span></h1>
-          <div id="subtitleText" class="sub">Weather Dashboard using the latest data from public API sources.</div>
-        </div>
-      </div>
-      <div class="rightHead">
-        <span class="chip" id="locChip"><i class="fa-solid fa-location-dot"></i> <span id="locText">Bellingham, WA</span></span>
-        <button class="btn" onclick="window.print()"><i class="fa-solid fa-print"></i> Print</button>
-      </div>
-    </div>
-
-    <!-- Day picker -->
-    <div class="card">
-      <div class="row">
-        <h3>Pick a Day</h3>
-        <div class="dayTabs" id="dayTabs"></div>
-      </div>
-      <div id="alerts" class="mono" style="margin-top:6px;font-size:1rem"></div>
-    </div>
-
-    <div class="stack">
-      <!-- Tide -->
-      <div class="card">
-        <div class="row">
-          <h3><i class="fa-solid fa-water"></i> Tide (ft)</h3>
-          <div class="legend">
-            <span class="key"><span class="dot d-tide"></span>Tide (9449424 · MLLW)</span>
-          </div>
-        </div>
-        <div class="sparkWrap">
-          <svg id="chartTide" class="chart" viewBox="0 0 900 240" style="width:100%;height:240px"></svg>
-          <div id="tipTide" class="tooltip"></div>
-        </div>
-        <div id="tideErr"></div>
-      </div>
-
-      <!-- Temp -->
-      <div class="card">
-        <div class="row">
-          <h3><i class="fa-solid fa-temperature-three-quarters"></i> Temperature (°F)</h3>
-          <div class="legend"><span class="key"><span class="dot d-temp"></span>Air Temp</span></div>
-        </div>
-        <div class="sparkWrap">
-          <svg id="chartTemp" class="chart" viewBox="0 0 900 240" style="width:100%;height:240px"></svg>
-          <div id="tipTemp" class="tooltip"></div>
-        </div>
-      </div>
-
-      <!-- Clouds & Rain -->
-      <div class="card">
-        <div class="row">
-          <h3><i class="fa-solid fa-cloud-sun-rain"></i> Clouds & Rain (%)</h3>
-          <div class="legend">
-            <span class="key"><span class="dot d-pop"></span>% Precip</span>
-            <span class="key"><span class="dot d-cloud"></span>% Cloud cover</span>
-          </div>
-        </div>
-        <div class="sparkWrap">
-          <svg id="chartPop" class="chart" viewBox="0 0 900 240" style="width:100%;height:240px"></svg>
-          <div id="tipPop" class="tooltip"></div>
-        </div>
-        <div id="chartErr"></div>
-      </div>
-
-      <!-- Wind -->
-      <div class="card">
-        <div class="row">
-          <h3><i class="fa-solid fa-wind"></i> Wind</h3>
-          <div class="legend"><span class="key"><span class="dot d-wind"></span>Speed & Direction</span></div>
-        </div>
-        <div class="sparkWrap">
-          <svg id="chartWind" class="chart" viewBox="0 0 900 240" style="width:100%;height:240px"></svg>
-          <div id="tipWind" class="tooltip"></div>
-        </div>
-      </div>
-
-      <!-- Light -->
-      <div class="card">
-        <h3><i class="fa-solid fa-sun"></i> Light (Sunrise & Sunset)</h3>
-        <div class="kvs" id="sunDusk"></div>
-        <div id="sunErr"></div>
-      </div>
-
-      <!-- Shore -->
-      <div class="card">
-        <h3><i class="fa-solid fa-cloud-sun-rain"></i> Shore Forecast (Selected Day)</h3>
-        <div class="kvs" id="weather"></div>
-        <div id="wxErr"></div>
-      </div>
-
-      <!-- Marine — stacked -->
-      <div class="card">
-        <div class="row">
-          <h3><i class="fa-solid fa-water"></i> Marine Forecast (CWF — PZZ133)</h3>
-        </div>
-        <div id="marine" class="stacked-rows" style="margin-bottom:10px"></div>
-        <div id="marineMsg" class="note" style="display:none"></div>
-      </div>
-
-      <!-- Notes -->
-      <div class="card">
-        <h3><i class="fa-solid fa-note-sticky"></i> Notes</h3>
-        <textarea id="notes" class="mono" style="width:100%;height:65px;background:#0f1c2f;color:#e8eef7;border:1px solid #2f476a;border-radius:10px;padding:10px" placeholder="Trip notes… traps, bait, launch ramp, crew, etc."></textarea>
-      </div>
-
-      <!-- Sources -->
-      <div class="footer mono card">
-        <strong>APIs used</strong>
-        <ul>
-          <li>NOAA CO-OPS Tides &amp; Currents — <code>/predictions</code> hourly tide curve &amp; hi/lo markers (station 9449424 Cherry Point, datum MLLW)</li>
-          <li>NWS Weather API — <code>/points</code> → <code>forecastHourly</code> for hourly temperature, precipitation probability, and wind</li>
-          <li>NWS Weather API — <code>/points</code> → <code>forecastGridData</code> for gridpoint <code>skyCover</code> (cloud cover %)</li>
-          <li>NWS Products — <code>/products/types/CWF/locations/SEW</code> &amp; <code>/products/{id}</code> for Coastal Waters Forecast (zone PZZ133)</li>
-          <li>Sunrise-Sunset — daily <code>/json</code> for sunrise &amp; sunset used for night-time shading</li>
-        </ul>
-      </div>
-    </div>
-  </div>
-
+<section id="agentReportPage" hidden aria-label="Crab Dash machine-readable report" data-report-status="loading"><h1>Crab Dash v2.4 — Complete 5-Day Report</h1><p>JavaScript-generated report for browser-capable agents. Wait until report-status is ready or partial.</p><pre id="agentReportText">REPORT_STATUS: LOADING</pre></section>
+<main class="container" id="crab-dash" data-timezone="America/Los_Angeles" data-tide-station="9449424" data-marine-zone="PZZ133">
+<header class="header">
+ <div class="brand"><div class="logo" aria-hidden="true"></div><div><h1>Crab Dash <span class="sub" style="font-size:.7em">v2.4</span></h1><div class="sub">5-day weather &amp; tide planner · Pacific time</div></div></div>
+ <div class="header-actions"><span class="chip">⌖ Cherry Point, WA</span><button class="btn" type="button" id="printBtn">Print</button><time class="selected-date" id="headerDate" aria-label="Selected forecast date"></time></div>
+</header>
+<div class="stack">
+ <section class="card" aria-labelledby="dayHeading">
+  <div class="toolbar"><h2 id="dayHeading">Pick a day</h2><nav class="day-tabs" id="dayTabs" aria-label="Forecast day"></nav></div>
+  <div class="control-line"><div id="updated" class="status-brief" role="status">Loading forecasts…</div></div>
+   <details class="freshness-details"><summary>Source details &amp; issuance times</summary><div class="freshness" id="freshness">Checking data sources…</div></details>
+ </section>
+ <section class="card" aria-labelledby="currentHeading"><h2 id="currentHeading">Conditions near now — forecast &amp; predicted</h2><div class="current-grid" id="currentGrid" aria-live="polite"></div><div class="current-status" id="currentStatus"></div></section>
+ <section class="card alerts-card" aria-labelledby="alertsHeading"><div class="alerts-heading"><h2 id="alertsHeading">Marine alerts &amp; advisories</h2></div><div id="alerts" aria-live="polite"><p class="state loading">Checking active advisories…</p></div></section>
+ <section class="card" aria-labelledby="summaryHeading"><h2 id="summaryHeading">Day summary <span class="muted" id="selectedDate"></span></h2><div class="summary-grid" id="summaryGrid" aria-live="polite"></div><div class="events" id="tideEvents" aria-label="High and low tides for selected day"></div></section>
+ <section class="card" aria-labelledby="tideHeading"><div class="heading-row"><h2 id="tideHeading">Tide (ft)</h2><div class="legend"><span class="key"><span class="dot" style="background:var(--tide)"></span>Cherry Point · MLLW</span></div></div><div class="chart-wrap"><svg class="chart" id="chartTide" aria-label="Hourly tide height chart; use left and right arrow keys to inspect values" tabindex="0" role="group"></svg></div><div class="chart-readout" id="readTide" aria-live="polite"></div><div class="state" id="statusTide"></div></section>
+ <section class="card" aria-labelledby="tempHeading"><div class="heading-row"><h2 id="tempHeading">Air temperature (°F)</h2><div class="legend"><span class="key"><span class="dot" style="background:var(--temp)"></span>Hourly temperature</span></div></div><div class="chart-wrap"><svg class="chart" id="chartTemp" tabindex="0" role="group" aria-label="Hourly temperature chart; use arrow keys to inspect values"></svg></div><div class="chart-readout" id="readTemp" aria-live="polite"></div><div class="state" id="statusTemp"></div></section>
+ <section class="card" aria-labelledby="cloudHeading"><div class="heading-row"><h2 id="cloudHeading">Clouds &amp; rain (%)</h2><div class="legend"><span class="key"><span class="dot" style="background:var(--pop)"></span>Precipitation</span><span class="key"><span class="dot" style="background:var(--cloud)"></span>Cloud cover</span></div></div><div class="chart-wrap"><svg class="chart" id="chartPop" tabindex="0" role="group" aria-label="Precipitation probability and cloud cover chart; use arrow keys to inspect values"></svg></div><div class="chart-readout" id="readPop" aria-live="polite"></div><div class="state" id="statusPop"></div></section>
+ <section class="card" aria-labelledby="windHeading"><div class="heading-row"><h2 id="windHeading">Shore-point wind (mph)</h2><div class="legend"><span class="key"><span class="dot" style="background:var(--wind)"></span>Nearshore Cherry Point forecast · upper end of range</span></div></div><div class="chart-wrap"><svg class="chart" id="chartWind" tabindex="0" role="group" aria-label="Wind speed chart; use arrow keys to inspect values"></svg></div><div class="chart-readout" id="readWind" aria-live="polite"></div><div class="state" id="statusWind"></div></section>
+ <section class="card" aria-labelledby="hourlyHeading"><h2 id="hourlyHeading">Exact hourly values</h2><details class="details" id="hourlyDetails"><summary>Show full hourly table</summary><div class="table-scroll"><table id="hourlyTable"><caption id="hourlyCaption">Selected day · Pacific time · full day</caption><thead><tr><th scope="col">Time</th><th scope="col">Tide (ft)</th><th scope="col">Temp (°F)</th><th scope="col">Precip (%)</th><th scope="col">Cloud (%)</th><th scope="col">Wind</th></tr></thead><tbody id="hourlyBody"></tbody></table></div></details></section>
+ <div class="two-col"><section class="card" aria-labelledby="lightHeading"><h2 id="lightHeading">Sunrise &amp; sunset</h2><dl class="kvs" id="sunDusk"></dl><p class="state" id="sunStatus"></p></section><section class="card" aria-labelledby="shoreHeading"><h2 id="shoreHeading">Shore forecast — selected day</h2><dl class="kvs" id="weather"></dl><p class="state" id="shoreStatus"></p></section></div>
+ <section class="card" aria-labelledby="marineHeading"><h2 id="marineHeading">Marine forecast — selected day (PZZ133)</h2><p class="small-note" id="marineSource">Coastal Waters Forecast · National Weather Service, Seattle</p><div id="marine" aria-live="polite"></div><p class="state" id="marineStatus"></p></section>
+ <footer class="footer card" aria-labelledby="sourcesHeading">
+  <h2 id="sourcesHeading">APIs used</h2><p class="small-note"><a href="?report=1">Open complete 5-day AI text report ↗</a> (requires JavaScript)</p>
+  <ul class="source-list">
+   <li><strong><a href="https://tidesandcurrents.noaa.gov/" target="_blank" rel="noopener">NOAA CO-OPS Tides &amp; Currents</a></strong><span>Hourly tide curve and high/low events · Cherry Point 9449424 · MLLW · <code>/predictions</code></span></li>
+   <li><strong><a href="https://www.weather.gov/documentation/services-web-api" target="_blank" rel="noopener">NWS Hourly Forecast</a></strong><span>Temperature, precipitation and Cherry Point shore-point wind (48.87047, −122.74875) · <code>/points</code> → <code>forecastHourly</code></span></li>
+   <li><strong><a href="https://www.weather.gov/documentation/services-web-api" target="_blank" rel="noopener">NWS Grid Forecast</a></strong><span>Cloud cover (<code>skyCover</code>) · <code>/points</code> → <code>forecastGridData</code></span></li>
+   <li><strong><a href="https://www.weather.gov/marine/" target="_blank" rel="noopener">NWS Coastal Waters Forecast</a></strong><span>Marine zone PZZ133 · <code>/products/types/CWF/locations/SEW/latest</code></span></li>
+   <li><strong><a href="https://www.weather.gov/documentation/services-web-alerts" target="_blank" rel="noopener">NWS Marine Alerts</a></strong><span>Current watches, warnings and advisories · <code>/alerts/active?zone=PZZ133</code></span></li>
+   <li><strong><a href="https://sunrise-sunset.org/api" target="_blank" rel="noopener">Sunrise-Sunset</a></strong><span>Sunrise, sunset and chart night shading · <code>/json</code></span></li>
+  </ul>
+ </footer>
+</div>
+</main>
 <script>
-/* ---------- CONFIG ---------- */
-const TZ = "America/Los_Angeles";
-const LAT = 48.7519, LON = -122.4787; // Bellingham
-const NOAA_TIDE_STATION = "9449424";  // Cherry Point (hourly supported)
-const MARINE_ZONE = "PZZ133";
-const WFO = "SEW";
-const DAYS = 5;
-
-/* ---------- RESPONSIVE ---------- */
-function isSmall(){ return window.innerWidth < 512; }
-function hourRange(){ return isSmall() ? {start:6,end:21} : {start:0,end:23}; }
-function applyResponsiveHeader(){
-  const t = document.getElementById('titleText');
-  const s = document.getElementById('subtitleText');
-  if(isSmall()){
-    t.innerHTML = 'Crab Dash <span class="mono" style="font-size:.85rem;color:#9db1cc">v1.4</span>';
-    s.textContent = 'Weather Dashboard';
-  }else{
-    t.innerHTML = 'Crab Dash — 5-Day Planner <span class="mono" style="font-size:.85rem;color:#9db1cc">v1.4</span>';
-    s.textContent = 'Weather Dashboard using the latest data from public API sources.';
-  }
+'use strict';
+const APP_NAME='CrabDash', APP_VERSION='2.4';
+const REPORT_MODE=new URLSearchParams(location.search).get('report')==='1';
+const TZ='America/Los_Angeles', LAT=48.87047, LON=-122.74875, STATION='9449424', MARINE_ZONE='PZZ133', WFO='SEW', DAYS=5;
+if(REPORT_MODE)document.body.classList.add('report-mode');
+const $=id=>document.getElementById(id);
+const zoneDate=new Intl.DateTimeFormat('en-CA',{timeZone:TZ,year:'numeric',month:'2-digit',day:'2-digit'});
+const zoneParts=new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit',hour12:false,year:'numeric',month:'2-digit',day:'2-digit',timeZoneName:'short'});
+const clockFormat=new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',minute:'2-digit',hour12:true});
+const dateFormat=new Intl.DateTimeFormat('en-US',{timeZone:'UTC',weekday:'short',month:'short',day:'numeric'});
+const wideDateFormat=new Intl.DateTimeFormat('en-US',{timeZone:'UTC',weekday:'long',month:'long',day:'numeric',year:'numeric'});
+const $n=(tag,className,text)=>{const el=document.createElement(tag);if(className)el.className=className;if(text!==undefined)el.textContent=String(text);return el;};
+const emptySource=()=>({status:'loading',data:null,error:null,at:null,checkedAt:null,issuedAt:null,inFlight:null});
+const state={days:[],day:0,core:{weather:emptySource(),sky:emptySource(),marine:emptySource(),alerts:emptySource()},daily:{tide:{},events:{},sun:{}},hourlyUrl:null,gridUrl:null};
+function localParts(date){const parts={};for(const p of zoneParts.formatToParts(date))if(p.type!=='literal')parts[p.type]=p.value;return {iso:`${parts.year}-${parts.month}-${parts.day}`,hour:Number(parts.hour)%24,minute:Number(parts.minute),zone:parts.timeZoneName||''};}
+function localISO(date){return localParts(date).iso;}
+function datePlus(iso,days){const d=new Date(`${iso}T12:00:00Z`);d.setUTCDate(d.getUTCDate()+days);return d.toISOString().slice(0,10);}
+function utcNoon(iso){return new Date(`${iso}T12:00:00Z`);}
+function clock(date){return clockFormat.format(date);}
+function clockHour(hour){return `${(hour%12)||12} ${hour<12?'AM':'PM'}`;}
+function clockMinute(hour){const h=Math.floor(hour),m=Math.round((hour-h)*60);return `${(h%12)||12}:${String(m).padStart(2,'0')} ${h<12?'AM':'PM'}`;}
+function localStamp(iso,hm){return `${iso}T${hm}:00`;}
+function numberOrNull(x){return typeof x==='number'&&Number.isFinite(x)?x:null;}
+function display(x,unit=''){return x==null?'—':`${x}${unit}`;}
+function asError(e){return e instanceof Error?e.message:String(e);}
+function hasData(src){return src.data!==null;}
+function setSource(obj,status,data=null,error=null){
+ if(status==='loading'){obj.status='loading';obj.error=null;}
+ else if(status==='ready'){obj.status='ready';obj.data=data;obj.error=null;obj.at=new Date();obj.checkedAt=obj.at;}
+ else{obj.status=hasData(obj)?'stale':'error';obj.error=error;obj.checkedAt=new Date();}
+ renderAll();
 }
-window.addEventListener('resize', ()=>{ applyResponsiveHeader(); renderAll(); });
-
-/* ---------- STATE ---------- */
-let dayList = [];
-let activeIndex = 0;
-let cache = {
-  tideHourly:{}, tideHiLo:{}, hourlyFx:null, sun:{} , marine: null, alerts: null,
-  gridUrl:null, gridSkyCover: {} // per-day {h, v}
-};
-
-/* ---------- HELPERS ---------- */
-const logFetch = (url) => console.log(`🔎 fetch @ ${new Date().toLocaleString()} → ${url}`);
-async function jsonFetch(url, opts){
-  logFetch(url);
-  const r = await fetch(url, opts);
-  if(!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-  return r.json();
+async function fetchJson(url){const response=await fetch(url);if(!response.ok)throw Error(`HTTP ${response.status}`);return response.json();}
+function loadInto(slot,load){
+ if(slot.inFlight)return slot.inFlight;
+ setSource(slot,'loading');
+ const task=(async()=>{try{setSource(slot,'ready',await load());}catch(e){console.warn('Crab Dash:',e);setSource(slot,'error',null,asError(e));}})();
+ slot.inFlight=task;
+ task.finally(()=>{if(slot.inFlight===task)slot.inFlight=null;});
+ return task;
 }
-function toClock(d){ return new Intl.DateTimeFormat(undefined,{hour:'numeric',minute:'2-digit',hour12:true,timeZone:TZ}).format(d); }
-function addKV(parent,label,value){
-  const l=document.createElement('div'); l.className='muted'; l.textContent=label;
-  const v=document.createElement('div'); v.textContent = (value===undefined||value===null||value==='')?'—':value;
-  parent.appendChild(l); parent.appendChild(v);
+function sourceMessage(src,label){return src.status==='loading'?(hasData(src)?`Refreshing ${label} (previous data shown)…`:`Loading ${label}…`):src.status==='stale'?`${label}: last refresh FAILED; showing older data${src.error?` (${src.error})`:''}.`:src.status==='error'?`Unable to load ${label}${src.error?` (${src.error})`:''}.`:'';}
+function initDays(){const today=localISO(new Date());state.days=Array.from({length:DAYS},(_,i)=>datePlus(today,i));const tabs=$('dayTabs');tabs.replaceChildren();state.days.forEach((iso,i)=>{const b=$n('button','tab',dateFormat.format(utcNoon(iso)));b.type='button';b.setAttribute('aria-pressed',String(i===state.day));b.dataset.date=iso;b.addEventListener('click',()=>selectDay(i));tabs.append(b);});}
+function selectDay(i){state.day=i;state.days.forEach((_,ix)=>$('dayTabs').children[ix].setAttribute('aria-pressed',String(ix===i)));renderAll();loadDay(state.days[i]);}
+const LAST_CHECK={alerts:0,weather:0,marine:0};
+const REFRESH_MS={alerts:10*60*1000,weather:60*60*1000,marine:60*60*1000};
+function checkDateRollover(){
+ if(localISO(new Date())===state.days[0])return;
+ const old=state.days[state.day];initDays();state.day=Math.max(0,state.days.indexOf(old));selectDay(state.day);
+ loadDay(state.days[0]);
+ if(REPORT_MODE)for(const iso of state.days)loadDay(iso);
 }
-function hToLabel(h){ const hh=(Math.round(h)%12||12); return `${hh}${h<12?'am':'pm'}`; }
-function getCss(varName){ return getComputedStyle(document.documentElement).getPropertyValue(varName).trim(); }
-function parseWindSpeedUnit(s){
-  if(!s) return {v:null,u:' mph'};
-  const txt = String(s).toLowerCase();
-  const num = (txt.match(/\d+(\.\d+)?/g)||[]).map(Number);
-  if(/kts?|knots?/.test(txt)){
-    const v = num.length ? num[num.length-1] : null;
-    return {v, u:' kt'};
-  }
-  const v = num.length ? num[num.length-1] : null;
-  return {v, u:' mph'};
+function due(kind,fn){const now=Date.now();if(now-LAST_CHECK[kind]>=REFRESH_MS[kind]){LAST_CHECK[kind]=now;fn();}}
+function refreshIfDue(){
+ if(document.visibilityState==='hidden')return;
+ checkDateRollover();
+ due('alerts',refreshAlerts);
+ due('marine',refreshMarine);
+ due('weather',refreshWeather);
 }
-
-/* ---------- INIT ---------- */
-const dayTabs = document.getElementById('dayTabs');
-initDays(); loadStatic().then(()=>{ applyResponsiveHeader(); renderAll(); }).catch(e => console.error(e));
-
-function initDays(){
-  const today = new Date();
-  dayList = [...Array(DAYS)].map((_,i)=> {
-    const d = new Date(today); d.setHours(0,0,0,0); d.setDate(d.getDate()+i);
-    return d.toISOString().slice(0,10);
-  });
-  dayTabs.innerHTML='';
-  dayList.forEach((iso,i)=>{
-    const d = new Date(iso+"T00:00:00");
-    const b = document.createElement('button');
-    b.className = 'tab' + (i===0?' active':'');
-    b.textContent = d.toLocaleDateString(undefined,{weekday:'short', month:'short', day:'numeric'});
-    b.onclick = ()=>{ activeIndex=i; [...dayTabs.children].forEach((c,ix)=>c.classList.toggle('active',ix===i)); renderAll(); };
-    dayTabs.appendChild(b);
-  });
+function init(){
+ initDays();renderAll();$('printBtn').addEventListener('click',()=>window.print());
+ if(REPORT_MODE){for(const iso of state.days)loadDay(iso);}else loadDay(state.days[state.day]);
+ refreshIfDue();
+ setInterval(()=>{refreshIfDue();if(!REPORT_MODE)updateChartClocks();else renderAgentReport();},60*1000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshIfDue();});
+ window.addEventListener('pageshow',()=>refreshIfDue());
 }
-
-/* ---------- DATA FETCH ---------- */
-async function loadStatic(){
-  const meta = await jsonFetch(`https://api.weather.gov/points/${LAT},${LON}`, {headers:{"User-Agent":"crabdash/1.4"}});
-  const hourlyUrl = meta.properties.forecastHourly;
-  cache.gridUrl = meta.properties.forecastGridData;
-  cache.hourlyFx = (await jsonFetch(hourlyUrl, {headers:{"User-Agent":"crabdash/1.4"}})).properties.periods || [];
-  cache.marine  = await fetchMarineCWF(MARINE_ZONE, WFO);
-  cache.alerts  = await fetchNWSAlerts(MARINE_ZONE);
+function refreshAlerts(){return loadInto(state.core.alerts,async()=>{
+ const j=await fetchJson(`https://api.weather.gov/alerts/active?zone=${MARINE_ZONE}`);
+ if(!Array.isArray(j.features))throw Error('Invalid NWS alert response');
+ return j.features;
+});}
+function refreshMarine(){return loadInto(state.core.marine,()=>fetchMarine());}
+async function refreshWeather(){
+ // Keep previously discovered URLs in case the points lookup briefly fails.
+ await loadInto(state.core.weather,async()=>{
+  const meta=await fetchJson(`https://api.weather.gov/points/${LAT},${LON}`);
+  const url=meta.properties?.forecastHourly,grid=meta.properties?.forecastGridData;
+  if(!url)throw Error('Hourly forecast URL unavailable');
+  state.hourlyUrl=url;if(grid)state.gridUrl=grid;
+  const j=await fetchJson(url);
+  if(!Array.isArray(j.properties?.periods))throw Error('Missing hourly periods');
+  state.core.weather.issuedAt=validDate(j.properties?.updateTime||j.properties?.updated);
+  return j.properties.periods;
+ });
+ await loadInto(state.core.sky,async()=>{
+  if(!state.gridUrl)throw Error('NWS gridpoint URL unavailable');
+  const j=await fetchJson(state.gridUrl),vals=j.properties?.skyCover?.values;
+  if(!Array.isArray(vals))throw Error('Missing cloud-cover values');
+  state.core.sky.issuedAt=validDate(j.properties?.updateTime||j.properties?.updated);
+  return vals.map(v=>{const [start,duration]=String(v.validTime||'').split('/');const t=Date.parse(start);return {start:t,end:t+durationMs(duration),value:numberOrNull(v.value)};}).filter(v=>Number.isFinite(v.start)&&Number.isFinite(v.end)&&v.end>v.start).sort((a,b)=>a.start-b.start);
+ });
 }
-
-async function fetchTideHourly(iso){
-  if(cache.tideHourly[iso]) return cache.tideHourly[iso];
-  const base=`https://api.tidesandcurrents.noaa.gov/api/prod/datagetter`;
-  const begin = iso.replace(/-/g,'');
-  const next  = new Date(iso+"T00:00:00"); next.setDate(next.getDate()+1);
-  const end   = next.toISOString().slice(0,10).replace(/-/g,'');
-  const params = new URLSearchParams({
-    station: NOAA_TIDE_STATION, product:'predictions', datum:'MLLW',
-    time_zone:'lst_ldt', interval:'h', units:'english',
-    begin_date:begin, end_date:end, format:'json', application:'crabdash'
-  });
-  const url = `${base}?${params.toString()}`;
-  const j = await jsonFetch(url);
-  if(!Array.isArray(j.predictions) || !j.predictions.length) throw new Error('No tide predictions returned.');
-  const pts = j.predictions.filter(p=>p.t.startsWith(iso)).map(p=>{
-    const [,tm]=p.t.split(' '); const [hh]=tm.split(':').map(Number);
-    return {h:hh, v:parseFloat(p.v), tLocal:p.t};
-  });
-  cache.tideHourly[iso]=pts; 
-  return pts;
+function validDate(v){const d=v?new Date(v):null;return d&&Number.isFinite(d.getTime())?d:null;}
+function durationMs(duration){const m=/^P(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?)?$/.exec(duration||'');return m?((Number(m[1]||0)*24+Number(m[2]||0))*60+Number(m[3]||0))*60000:0;}
+function tideURL(iso,interval){const params=new URLSearchParams({station:STATION,product:'predictions',datum:'MLLW',time_zone:'lst_ldt',interval,units:'english',begin_date:iso.replaceAll('-',''),end_date:iso.replaceAll('-',''),format:'json',application:`${APP_NAME}_v${APP_VERSION.replace('.', '_')}`});return `https://api.tidesandcurrents.noaa.gov/api/prod/datagetter?${params}`;}
+function parseTideTime(s){const match=/^(\d{4}-\d{2}-\d{2})\s+(\d{2}):(\d{2})/.exec(s||'');return match?{iso:match[1],hour:Number(match[2])+Number(match[3])/60,hm:`${match[2]}:${match[3]}`}:null;}
+function dailySlot(kind,iso){return state.daily[kind][iso]??(state.daily[kind][iso]=emptySource());}
+function loadDay(iso){for(const kind of ['tide','events','sun'])if(state.daily[kind][iso]?.status==='error')delete state.daily[kind][iso];const tide=dailySlot('tide',iso),events=dailySlot('events',iso),sun=dailySlot('sun',iso);
+ if(tide.status==='loading'&&!tide.started){tide.started=true;loadInto(tide,async()=>{const j=await fetchJson(tideURL(iso,'h'));if(!Array.isArray(j.predictions))throw Error('Tide data unavailable');return j.predictions.map(p=>{const t=parseTideTime(p.t);return t&&t.iso===iso?{hour:t.hour,hm:t.hm,value:Number(p.v)}:null;}).filter(p=>p&&Number.isFinite(p.value)).sort((a,b)=>a.hour-b.hour);});}
+ if(events.status==='loading'&&!events.started){events.started=true;loadInto(events,async()=>{const j=await fetchJson(tideURL(iso,'hilo'));if(!Array.isArray(j.predictions))throw Error('Tide events unavailable');return j.predictions.map(p=>{const t=parseTideTime(p.t);return t&&t.iso===iso&&['H','L'].includes(p.type)?{...t,value:Number(p.v),type:p.type}:null;}).filter(p=>p&&Number.isFinite(p.value)).sort((a,b)=>a.hour-b.hour);});}
+ if(sun.status==='loading'&&!sun.started){sun.started=true;loadInto(sun,async()=>{const j=await fetchJson(`https://api.sunrise-sunset.org/json?lat=${LAT}&lng=${LON}&date=${iso}&formatted=0`);if(j.status!=='OK'||!j.results?.sunrise||!j.results?.sunset)throw Error('Sun times unavailable');const sunrise=new Date(j.results.sunrise),sunset=new Date(j.results.sunset);if(localISO(sunrise)!==iso||localISO(sunset)!==iso)throw Error('Sun times did not match selected Pacific date');return {sunrise,sunset};});}
 }
-
-async function fetchTideHiLo(iso){
-  if(cache.tideHiLo[iso]) return cache.tideHiLo[iso];
-  const base=`https://api.tidesandcurrents.noaa.gov/api/prod/datagetter`;
-  const begin = iso.replace(/-/g,'');
-  const next  = new Date(iso+"T00:00:00"); next.setDate(next.getDate()+1);
-  const end   = next.toISOString().slice(0,10).replace(/-/g,'');
-  const params = new URLSearchParams({
-    station: NOAA_TIDE_STATION, product:'predictions', datum:'MLLW',
-    time_zone:'lst_ldt', interval:'hilo', units:'english',
-    begin_date:begin, end_date:end, format:'json', application:'crabdash'
-  });
-  const url = `${base}?${params.toString()}`;
-  const j = await jsonFetch(url);
-  const items = Array.isArray(j.predictions) ? j.predictions.filter(p=>p.t.startsWith(iso)) : [];
-  const markers = items.map(p=>{
-    const dt = p.t.split(' ')[1]; const [hh,mm] = dt.split(':').map(Number);
-    return { h: hh + mm/60, v: parseFloat(p.v), type: p.type }; // H or L
-  });
-  cache.tideHiLo[iso] = markers;
-  return markers;
+function extractZoneSection(text,zone){const lines=String(text||'').split(/\r?\n/);const first=lines.findIndex(line=>new RegExp(`^${zone}-`).test(line.trim()));if(first<0)return '';const out=[];for(let i=first;i<lines.length;i++){if(i>first&&/^[A-Z]{3}\d{3}-/.test(lines[i].trim()))break;if(lines[i].trim()==='$$')break;out.push(lines[i]);}return out.join('\n');}
+function parseMarinePeriods(text){const matches=[...text.matchAll(/^\.([A-Z][A-Z0-9 /-]*)\.\.\./gm)];return matches.map((m,i)=>({name:m[1].trim(),text:text.slice(m.index+m[0].length,i+1<matches.length?matches[i+1].index:text.length).replace(/\s+/g,' ').trim()})).filter(p=>p.text);}
+function issueISO(product){if(product.issuanceTime||product.issued){const d=new Date(product.issuanceTime||product.issued);if(Number.isFinite(d.getTime()))return localISO(d);}
+ // Fallback to the date from the standard NWS product header, not the viewer's local date.
+ const header=String(product.productText||'');const m=header.match(/\b(?:PST|PDT)\s+(?:MON|TUE|WED|THU|FRI|SAT|SUN)\s+([A-Z]{3})\s+(\d{1,2})\s+(\d{4})\b/i);
+ if(m){const month=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'].indexOf(m[1].toUpperCase())+1;if(month)return `${m[3]}-${String(month).padStart(2,'0')}-${String(Number(m[2])).padStart(2,'0')}`;}
+ return null;
 }
-
-async function fetchMarineCWF(zoneId, office){
-  const listUrl = `https://api.weather.gov/products/types/CWF/locations/${office}`;
-  const list = await jsonFetch(listUrl, {headers:{"User-Agent":"crabdash/1.4"}});
-  const id = list && list["@graph"] && list["@graph"][0] && list["@graph"][0].id;
-  if(!id) return [];
-  const prod = await jsonFetch(`https://api.weather.gov/products/${id}`, {headers:{"User-Agent":"crabdash/1.4"}});
-  const text = prod.productText || "";
-  const section = extractZoneSection(text, zoneId);
-  return parseCWFPeriods(section);
+function marineDay(name,issued){if(!issued)return null;const n=name.toUpperCase().trim().replace(/\s+/g,' ');
+ if(/^(?:REST OF )?TODAY$|^THIS (?:AFTERNOON|MORNING|EVENING)$|^(?:REST OF )?TONIGHT$|^OVERNIGHT$/.test(n))return issued;
+ if(/^TOMORROW(?: NIGHT)?$/.test(n))return datePlus(issued,1);
+ const match=/^(SUN(?:DAY)?|MON(?:DAY)?|TUE(?:SDAY)?|WED(?:NESDAY)?|THU(?:RSDAY)?|FRI(?:DAY)?|SAT(?:URDAY)?)(?: NIGHT| EVENING| AFTERNOON| MORNING)?$/.exec(n);if(!match)return null;
+ const week=['SUN','MON','TUE','WED','THU','FRI','SAT'];const target=week.indexOf(match[1].slice(0,3));const d=utcNoon(issued).getUTCDay();return datePlus(issued,(target-d+7)%7);
 }
-
-function extractZoneSection(text, zone){
-  const lines = text.split(/\r?\n/);
-  const startIdx = lines.findIndex(l => l.trim().startsWith(`${zone}-`));
-  if(startIdx === -1) return "";
-  let out = [];
-  for(let i=startIdx;i<lines.length;i++){
-    const line = lines[i];
-    if(i>startIdx && /^[A-Z]{3}\d{3}-/.test(line.trim())) break;
-    if(line.trim()==="$$") break;
-    out.push(line);
-  }
-  return out.join("\n");
+async function fetchMarine(){const prod=await fetchJson(`https://api.weather.gov/products/types/CWF/locations/${WFO}/latest`);if(typeof prod.productText!=='string'||!prod.productText.trim())throw Error('Latest marine bulletin has no text');const section=extractZoneSection(prod.productText,MARINE_ZONE);if(!section)throw Error('PZZ133 not present in latest marine bulletin');const issued=issueISO(prod);state.core.marine.issuedAt=validDate(prod.issuanceTime||prod.issued);const periods=parseMarinePeriods(section).map(p=>({...p,iso:marineDay(p.name,issued)}));if(!periods.length)throw Error('No marine periods could be parsed');return {issued,periods};}
+function dayHours(iso){const noon=utcNoon(iso).getTime();const start=noon-22*3600000,end=noon+38*3600000;const a=[];for(let t=start;t<end;t+=3600000){const d=new Date(t);if(localISO(d)===iso){const p=localParts(d);a.push({t,iso,hour:p.hour,hm:`${String(p.hour).padStart(2,'0')}:00`,zone:p.zone,dayHour:p.hour});}}return a;}
+function upperWind(wind){const s=String(wind||'').toLowerCase();const nums=[...s.matchAll(/\d+(?:\.\d+)?/g)].map(m=>Number(m[0]));if(!nums.length)return null;const upper=Math.max(...nums);return /\b(?:kt|kts|knots?)\b/.test(s)?Math.round(upper*1.15078*10)/10:upper;}
+function getRows(iso){const weather=hasData(state.core.weather)?state.core.weather.data:[];const cloudy=hasData(state.core.sky)?state.core.sky.data:[];const tide=hasData(dailySlot('tide',iso))?dailySlot('tide',iso).data:[];
+ const periods=new Map();weather.forEach(p=>{const t=Date.parse(p.startTime);if(Number.isFinite(t))periods.set(t,p);});
+ const tideUsed=new Map();const rows=dayHours(iso).map(item=>{
+   const wx=periods.get(item.t)||null;
+   const sky=cloudy.find(a=>item.t>=a.start&&item.t<a.end);
+   const matchingTides=tide.filter(p=>Math.floor(p.hour)===item.hour);const used=tideUsed.get(item.hour)||0;const tidePt=matchingTides[used];tideUsed.set(item.hour,used+1);
+   const wind=wx?upperWind(wx.windSpeed):null;
+   return {...item,tide:tidePt?.value??null,temp:numberOrNull(wx?.temperature),pop:numberOrNull(wx?.probabilityOfPrecipitation?.value),cloud:sky?.value??null,wind,windRaw:wx?.windSpeed||null,windDir:wx?.windDirection||'',description:wx?.shortForecast||null};
+ });return rows;
 }
-
-function parseCWFPeriods(sectionText){
-  if(!sectionText) return [];
-  const body = sectionText.replace(/^.*?\n/, '');
-  const parts = body.split(/\n(?=\.[A-Z][A-Z0-9 \-]*\.\.\.)/);
-  const periods = [];
-  parts.forEach(chunk=>{
-    const m = chunk.match(/^\.(?<name>[A-Z0-9 \-]+)\.\.\.(?<rest>[\s\S]*)/);
-    if(m){
-      periods.push({
-        name: m.groups.name.trim(),
-        text: m.groups.rest.replace(/\n+/g,' ').replace(/\s+/g,' ').trim()
-      });
-    }else{
-      const txt = chunk.trim();
-      if(txt && !/^\s*$/.test(txt) && !txt.startsWith('$$')) {
-        periods.push({name:'Synopsis', text: txt.replace(/\s+/g,' ')});
-      }
-    }
-  });
-  return periods;
+function displayStatus(el,src,label){el.textContent=src.status==='ready'?'':sourceMessage(src,label);el.className=`state ${['error','stale'].includes(src.status)?'error':src.status==='loading'?'loading':''}`;}
+const dateTimeText=d=>d?`${new Intl.DateTimeFormat('en-US',{timeZone:TZ,month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(d)}`:'unknown';
+function freshnessLabel(src,name,forecast=false){
+ let status=src.status==='ready'?'OK':src.status==='stale'?'STALE — last check failed':src.status==='error'?'UNAVAILABLE':'Loading';
+ let out=`${name}: ${status}`;
+ if(src.at)out+=` · checked ${dateTimeText(src.at)}`;
+ if(forecast&&src.issuedAt)out+=` · issued ${dateTimeText(src.issuedAt)}`;
+ if(src.error)out+=` · ${src.error}`;
+ return out;
 }
-
-async function fetchNWSAlerts(zoneId){
-  const j = await jsonFetch(`https://api.weather.gov/alerts/active?zone=${zoneId}`, {headers:{"User-Agent":"crabdash/1.4"}});
-  return j.features || [];
+function renderFreshness(){
+ const el=$('freshness');el.replaceChildren();
+ for(const [name,src,issued] of [['Alerts',state.core.alerts,false],['Weather',state.core.weather,true],['Clouds',state.core.sky,true],['Marine',state.core.marine,true],['Tides',dailySlot('tide',state.days[state.day]),false],['Sun',dailySlot('sun',state.days[state.day]),false]]){
+  const item=$n('span','fresh-item '+(['stale','error'].includes(src.status)?'stale':src.status==='loading'?'loading':''));
+  item.textContent=freshnessLabel(src,name,issued);el.append(item);
+ }
 }
-
-/* ---- Gridpoint skyCover (% cloud cover) expansion to hourly ---- */
-async function fetchSkyCoverForDay(iso){
-  if(cache.gridSkyCover[iso]) return cache.gridSkyCover[iso];
-  if(!cache.gridUrl) return [];
-  const j = await jsonFetch(cache.gridUrl, {headers:{"User-Agent":"crabdash/1.4"}});
-  const sc = j.properties && j.properties.skyCover && j.properties.skyCover.values;
-  if(!Array.isArray(sc)) return [];
-  const out = [];
-  sc.forEach(entry=>{
-    const [start, dur] = String(entry.validTime).split('/');
-    const startDate = new Date(start);
-    const m = dur && dur.match(/^PT(\d+)H/);
-    const hours = m ? parseInt(m[1],10) : 1;
-    for(let i=0;i<hours;i++){
-      const t = new Date(startDate); t.setHours(t.getHours()+i);
-      const isoDay = t.toISOString().slice(0,10);
-      if(isoDay === iso){ out.push({ h: t.getHours(), v: Number(entry.value) }); }
-    }
-  });
-  const byH = {};
-  out.forEach(p=>{ byH[p.h]=p.v; });
-  const hours = Object.keys(byH).map(h=>({h:Number(h), v:byH[h]})).sort((a,b)=>a.h-b.h);
-  cache.gridSkyCover[iso] = hours;
-  return hours;
+function renderAll(){
+ if(!state.days.length)return;
+ if(REPORT_MODE){renderAgentReport();return;}
+ const iso=state.days[state.day],rows=getRows(iso);
+ $('crab-dash').dataset.selectedDate=iso;
+ $('headerDate').textContent=dateFormat.format(utcNoon(iso));$('headerDate').dateTime=iso;
+ $('selectedDate').textContent=`· ${wideDateFormat.format(utcNoon(iso))}${iso===localISO(new Date())?' · weather from remaining forecast hours':''}`;
+ const brief=$('updated');brief.replaceChildren();
+ for(const [name,src] of [['Alerts',state.core.alerts],['Weather',state.core.weather],['Marine',state.core.marine]]){
+  const label=$n('span', ['stale','error'].includes(src.status)?'bad':src.status==='loading'?'loading':'', `${name} ${src.status==='ready'?'✓':src.status==='loading'?'…':'⚠'} ${src.at?clock(src.at):'—'}`);brief.append(label);
+ }
+ renderFreshness();renderCurrent();renderAlerts();renderSummary(iso,rows);renderCharts(iso,rows);renderTable(iso,rows);renderSun(iso);renderShore(rows);renderMarine(iso);
 }
-
-/* ---------- RENDER ---------- */
-async function renderAll(){
-  const iso = dayList[activeIndex];
-
-  // sunrise/sunset
-  try{
-    if(!cache.sun[iso]){
-      const sun = await jsonFetch(`https://api.sunrise-sunset.org/json?lat=${LAT}&lng=${LON}&date=${iso}&formatted=0`);
-      cache.sun[iso] = sun.results;
-    }
-  }catch(e){ document.getElementById('sunErr').innerHTML = `<div class="err mono">${e}</div>`; }
-
-  // alerts
-  const alertsBox = document.getElementById('alerts'); alertsBox.innerHTML='';
-  (cache.alerts||[]).forEach(a=>{
-    const sev = (a.properties.severity||'').toLowerCase();
-    const tag = document.createElement('span');
-    tag.className = 'tag ' + (sev.includes('warning') ? 'sev-warning' : (sev.includes('watch') ? 'sev-watch' : 'sev-advisory'));
-    const until = a.properties.ends ? ` (until ${new Date(a.properties.ends).toLocaleString(undefined,{hour:'numeric',minute:'2-digit',month:'short',day:'numeric',timeZone:TZ})})` : '';
-    tag.textContent = `${a.properties.event}${until}`;
-    alertsBox.appendChild(tag);
-  });
-  if(!alertsBox.childElementCount) {
-    const ok = document.createElement('span');
-    ok.className = 'tag';
-    ok.style.border = '1px solid #3a556f'; ok.style.color='#9db1cc'; ok.style.background='transparent'; ok.style.fontWeight='600';
-    ok.textContent = 'No active marine advisories.';
-    alertsBox.appendChild(ok);
-  }
-
-  // shore hourly for selected day
-  const wxBox = document.getElementById('weather'); wxBox.innerHTML='';
-  const d0 = new Date(iso+"T00:00:00"); const d1 = new Date(iso+"T23:59:59");
-  const hoursFx = (cache.hourlyFx||[]).filter(p=>{ const t=new Date(p.startTime); return t>=d0 && t<=d1; });
-  if(hoursFx.length){
-    const cleanTemp = hoursFx.map(h=>h.temperature).filter(v=>typeof v==='number');
-    const tMax = cleanTemp.length? Math.max(...cleanTemp):'—';
-    const tMin = cleanTemp.length? Math.min(...cleanTemp):'—';
-    addKV(wxBox,'Temp Range', `${tMin}–${tMax} °F`);
-    const first = hoursFx[0];
-    addKV(wxBox,'First Hour', `${first.shortForecast} • ${first.windSpeed || '—'} ${first.windDirection||''}`);
-  }else{
-    addKV(wxBox,'Status','No hourly forecast parsed');
-  }
-
-  // marine (PZZ133) — stacked blocks
-  const mBox = document.getElementById('marine'); mBox.innerHTML='';
-  const msg = document.getElementById('marineMsg'); msg.style.display='none';
-  const periods = cache.marine||[];
-  if(periods.length){
-    periods.slice(0,4).forEach(p=>{
-      const div = document.createElement('div');
-      div.className='block';
-      const h = document.createElement('div'); h.className='hdr'; h.textContent = p.name;
-      const t = document.createElement('div'); t.textContent = p.text;
-      div.appendChild(h); div.appendChild(t);
-      mBox.appendChild(div);
-    });
-  }else{
-    msg.textContent = "Could not parse PZZ133 from latest CWF.";
-    msg.style.display='inline-block';
-  }
-
-  // light panel
-  const sun = cache.sun[iso]; const lightBox = document.getElementById('sunDusk'); lightBox.innerHTML='';
-  let sunriseHour=6, sunsetHour=18;
-  if(sun){ 
-    const sunrise = new Date(new Date(sun.sunrise).toLocaleString('en-US',{timeZone:TZ}));
-    const sunset  = new Date(new Date(sun.sunset ).toLocaleString('en-US',{timeZone:TZ}));
-    addKV(lightBox,'Sunrise', toClock(sunrise));
-    addKV(lightBox,'Sunset',  toClock(sunset));
-    sunriseHour = sunrise.getHours() + sunrise.getMinutes()/60;
-    sunsetHour  = sunset.getHours()  + sunset.getMinutes()/60;
-  }
-
-  // series
-  try{
-    const r = hourRange();
-    const tide = (await fetchTideHourly(iso)).filter(p=>p.h>=r.start && p.h<=r.end);
-    const hilo = (await fetchTideHiLo(iso)).filter(p=>p.h>=r.start && p.h<=r.end+0.001);
-
-    const tSeries = hoursFx
-      .map(h=>({h:new Date(h.startTime).getHours(), v: (typeof h.temperature==='number'? h.temperature : null)}))
-      .filter(p=>p.v!==null && p.h>=r.start && p.h<=r.end);
-
-    const pSeries = hoursFx
-      .map(h=>({h:new Date(h.startTime).getHours(), v: (typeof (h.probabilityOfPrecipitation?.value)==='number'? h.probabilityOfPrecipitation.value : null)}))
-      .filter(p=>p.v!==null && p.h>=r.start && p.h<=r.end);
-
-    const skySeriesFull = await fetchSkyCoverForDay(iso);
-    const skySeries = skySeriesFull.filter(p=>p.h>=r.start && p.h<=r.end);
-
-    const windParsed = hoursFx.map(h=>{
-      const {v,u} = parseWindSpeedUnit(h.windSpeed);
-      return { h:new Date(h.startTime).getHours(), v, dir: h.windDirection || '—', unit:u };
-    }).filter(p=>p.v!==null && p.h>=r.start && p.h<=r.end);
-
-    const unitVotes = windParsed.reduce((m,o)=>((m[o.unit]=(m[o.unit]||0)+1),m),{});
-    const windUnit = Object.entries(unitVotes).sort((a,b)=>b[1]-a[1])[0]?.[0] || ' mph';
-
-    drawLineChart({
-      svgId:'chartTide', tipId:'tipTide', color:getCss('--tide'),
-      data:tide, yMode:'auto', unit:' ft', shade:{sunriseHour, sunsetHour}, snapPx:isSmall()?18:14, range:r,
-      markers: hilo
-    });
-    drawLineChart({
-      svgId:'chartTemp', tipId:'tipTemp', color:getCss('--temp'),
-      data:tSeries, yMode:'tight', unit:' °F', shade:{sunriseHour, sunsetHour}, snapPx:isSmall()?18:14, range:r
-    });
-    drawMultiChart({
-      svgId:'chartPop', tipId:'tipPop', shade:{sunriseHour, sunsetHour}, snapPx:isSmall()?18:14, unit:'%', range:r,
-      series: [
-        { name:'% Precip', color:getCss('--pop'),  data:pSeries },
-        { name:'% Cloud',  color:getCss('--cloud'), data:skySeries }
-      ]
-    });
-    drawLineChart({
-      svgId:'chartWind', tipId:'tipWind', color:getCss('--wind'),
-      data:windParsed.map(({h,v,dir})=>({h,v,dir})), yMode:'wind', unit:windUnit, shade:{sunriseHour, sunsetHour}, snapPx:isSmall()?18:14, range:r,
-      formatLabel:(pt)=> `${hToLabel(pt.h)} • ${pt.v} ${windUnit.trim()} • ${pt.dir}`
-    });
-
-  }catch(e){
-    document.getElementById('tideErr').innerHTML = `<div class="err mono">${e.message || e}</div>`;
-  }
+function officialAlertURL(f){
+ // NWS `web` is frequently just the home page. Always prefer this alert's unique @id.
+ const p=f.properties||{};
+ for(const candidate of [p['@id'],f.id]){
+  if(typeof candidate!=='string')continue;
+  try{const u=new URL(candidate);if(u.hostname==='api.weather.gov'&&u.pathname.startsWith('/alerts/')&&['http:','https:'].includes(u.protocol)){u.protocol='https:';return u.href;}}catch(e){}
+ }
+ if(typeof p.id==='string'&&/^urn:oid:[A-Za-z0-9.\-]+$/.test(p.id))return `https://api.weather.gov/alerts/${p.id}`;
+ return null;
 }
-
-/* ---------- CHARTS ---------- */
-/* 2x-tall graphs on small screens without horizontal stretching */
-function setupSvgSize(svg){
-  const Wvb = 900;
-  const Hvb = isSmall() ? 480 : 240;   // 2x taller on small screens
-  const Hcss = Hvb;                    // match CSS height to viewBox height
-
-  svg.setAttribute('viewBox', `0 0 ${Wvb} ${Hvb}`);
-  svg.setAttribute('preserveAspectRatio', 'xMidYMid meet'); // maintain width mapping
-  svg.style.width = '100%';
-  svg.style.height = Hcss + 'px';
-
-  return { W: Wvb, H: Hvb };
+function renderAlerts(){const el=$('alerts'),src=state.core.alerts;el.replaceChildren();
+ if(src.status!=='ready'){
+  const msg=src.status==='loading'?(hasData(src)?'Checking for newer alerts; previous alert results below are not a current check.':'Checking active marine alerts…'):src.status==='stale'?'WARNING: Latest marine alert check failed. Below are LAST KNOWN results, NOT the current alert status. Check NWS directly.':'Could not check active marine alerts. Alert status is unknown; check NWS directly.';
+  el.append($n('p','state '+(['error','stale'].includes(src.status)?'error':'loading'),msg));
+  if(!hasData(src))return;
+ }
+ if(!src.data.length){el.append($n('p','state',src.status==='ready'?'No active marine alerts reported by NWS at the last successful check.':'No alerts in LAST KNOWN response — CURRENT STATUS UNKNOWN.'));return;}
+ for(const f of src.data){const p=f.properties||{},article=$n('article','alert-detail'+(/Severe|Extreme/i.test(p.severity||'')?' severe':''));
+  article.dataset.alertId=p.id||'';
+  article.append($n('h3','',p.event||'Marine alert'));
+  const meta=[];
+  if(p.onset){const d=validDate(p.onset);if(d)meta.push(`Starts ${dateTimeText(d)}`);}
+   if(p.ends){const d=new Date(p.ends);if(Number.isFinite(d.getTime()))meta.push(`Until ${new Intl.DateTimeFormat('en-US',{timeZone:TZ,weekday:'short',month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'}).format(d)}`);}
+  if(p.areaDesc)meta.push(p.areaDesc);
+  if(meta.length)article.append($n('p','alert-meta',meta.join(' · ')));
+  if(p.description?.trim())article.append($n('p','alert-copy',p.description.trim()));
+  else if(p.headline?.trim())article.append($n('p','alert-copy',p.headline.trim()));
+  else article.append($n('p','alert-copy','The NWS did not supply advisory text in this response. Follow the original alert link for its full details.'));
+  if(p.instruction?.trim()){const box=$n('div','alert-instruction');box.append($n('strong','','Safety instructions'),$n('p','alert-copy',p.instruction.trim()));article.append(box);}
+  const url=officialAlertURL(f);
+  if(url){const a=$n('a','', 'Open this advisory at NWS ↗');a.href=url;a.target='_blank';a.rel='noopener noreferrer';article.append(a);}
+  el.append(article);
+ }
 }
-
-
-function drawLineChart(options){
-  const {svgId, tipId, color, data, yMode, unit, shade, snapPx=12, formatLabel, markers, range} = options;
-  const svg = document.getElementById(svgId);
-  const {W, H} = setupSvgSize(svg);
-  const P = {l:48,r:48,t:18,b:36};
-  svg.innerHTML='';
-
-  const H0 = (range?.start ?? 0), H1 = (range?.end ?? 23);
-  const x = h => P.l + ((h-H0)/(H1-H0))*(W-P.l-P.r);
-
-  // sizes (double on small screens)
-  const AXIS_FONT = isSmall()?28:14;
-  const LINE_W = isSmall()?16:4;
-  const DOT_R  = isSmall()?18:4.5;
-  const MARK_R = isSmall()?28:7;
-  const MARK_SW= isSmall()?12:3;
-
-  // y-scale
-  let yMin, yMax;
-  if(yMode==='fixed01'){ yMin=0; yMax=100; }
-  else if(yMode==='wind'){
-    const vals = data.map(d=>d.v);
-    const dMax = vals.length? Math.max(...vals) : 0;
-    yMin = 0;
-    yMax = Math.max(20, Math.ceil(dMax + Math.max(2, dMax*0.15)));
-  } else {
-    const vals = data.map(d=>d.v);
-    const dMin = vals.length? Math.min(...vals) : 0;
-    const dMax = vals.length? Math.max(...vals) : 1;
-    const pad = yMode==='tight' ? Math.max(1, (dMax-dMin)*0.15) : Math.max(1, (dMax-dMin)*0.2);
-    yMin = Math.floor(dMin - pad);
-    yMax = Math.ceil (dMax + pad);
-    if(yMin===yMax){ yMin-=1; yMax+=1; }
-  }
-  const y = v => H-P.b - ((v - yMin)/(yMax-yMin))*(H-P.t-P.b);
-
-  const g = (tag, attrs) => { const el=document.createElementNS('http://www.w3.org/2000/svg', tag); for(const k in attrs) el.setAttribute(k, attrs[k]); return el; };
-
-  // Night shading
-  if(shade){
-    const shadeColor = 'rgba(10, 17, 32)';
-    const sx = (h) => x(Math.max(H0, Math.min(H1, h)));
-    if(H0 < (shade.sunriseHour||6)) svg.appendChild(g('rect',{x:sx(H0),y:P.t,width:Math.max(0,sx(Math.min(H1, shade.sunriseHour))-sx(H0)),height:H-P.t-P.b,fill:shadeColor}));
-    if(H1 > (shade.sunsetHour||18)) svg.appendChild(g('rect',{x:sx(Math.max(H0, shade.sunsetHour)),y:P.t,width:Math.max(0,sx(H1)-sx(Math.max(H0, shade.sunsetHour))),height:H-P.t-P.b,fill:shadeColor}));
-  }
-
-  // Grid & ticks
-  const tickStep = (H1-H0) <= 16 ? 2 : 3;
-  for(let h=H0; h<=H1; h+=tickStep){
-    svg.appendChild(g('line',{x1:x(h),y1:P.t,x2:x(h),y2:H-P.b,stroke:'#22324d','stroke-dasharray':'3 4'}));
-    const tx=g('text',{x:x(h),y:H-10,fill:'#9db1cc','text-anchor':'middle','font-size':String(AXIS_FONT)}); tx.textContent=(h%12||12)+(h<12?'a':'p'); svg.appendChild(tx);
-  }
-  const step = Math.max(1, Math.round( ( (yMax-yMin) || 6 ) / 6));
-  for(let v=yMin; v<=yMax; v+=step){
-    const yy=y(v); svg.appendChild(g('line',{x1:P.l-4,y1:yy,x2:W-P.r,y2:yy,stroke:'#22324d','stroke-dasharray':'3 4'}));
-    const tx=g('text',{x:P.l-8,y:yy+(AXIS_FONT/3),fill:'#9db1cc','text-anchor':'end','font-size':String(AXIS_FONT)}); tx.textContent=v; svg.appendChild(tx);
-  }
-
-  // Path & points
-  const pts = data.filter(d=>d.v!=null);
-  const path = pts.map((d,i)=>`${i?'L':'M'}${x(d.h)},${y(d.v)}`).join(' ');
-  if(path){
-    svg.appendChild(g('path',{d:path,fill:'none','stroke-width':String(LINE_W),stroke:color}));
-    pts.forEach(d=> svg.appendChild(g('circle',{cx:x(d.h),cy:y(d.v),r:String(DOT_R),fill:color})));
-  }
-
-  // Hi/Lo markers
-  if(Array.isArray(markers) && markers.length){
-    markers.forEach(m=>{
-      const cx = x(m.h), cy = y(m.v);
-      const dot = g('circle',{cx, cy, r:String(MARK_R), fill:"#0f1c2f", stroke:color, 'stroke-width':String(MARK_SW)});
-      dot.classList.add('marker');
-      dot.setAttribute('data-label', `${m.type==='H'?'High':'Low'} • ${hToLabel(m.h)} • ${m.v.toFixed(1)}${unit.trim()}`);
-      svg.appendChild(dot);
-    });
-  }
-
-  // Tooltip
-  const tip = document.getElementById(tipId);
-  const toCoords = (evt) => {
-    const rect = svg.getBoundingClientRect();
-    const cssX = evt.clientX - rect.left, cssY = evt.clientY - rect.top;
-    const pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
-    const inv = svg.getScreenCTM().inverse(); const s = pt.matrixTransform(inv);
-    return { svgX:s.x, cssX, cssY };
-  };
-  function showTip(cssX,cssY,label){ tip.style.left = cssX+'px'; tip.style.top = (cssY-12)+'px'; tip.style.display='block'; tip.textContent = label; }
-  function hideTip(){ tip.style.display='none'; }
-
-  const nearest = (svgX) => {
-    let bestH = H0, bestDx = Infinity;
-    for(let h=H0; h<=H1; h++){ const dx = Math.abs(svgX - x(h)); if(dx<bestDx){bestDx=dx; bestH=h;} }
-    if(bestDx > snapPx) return null;
-    const point = data.reduce((a,b)=> Math.abs(b.h-bestH) < Math.abs(a.h-bestH) ? b : a, data[0] || null);
-    return point ? {h:bestH, p:point} : null;
-  };
-  const labeler = (pt)=> options.formatLabel ? options.formatLabel(pt) : `${hToLabel(pt.h)} • ${pt.v}${unit}`;
-
-  const onMove = (evt) => {
-    const {svgX, cssX, cssY} = toCoords(evt);
-    const pick = nearest(svgX);
-    if(!pick){ hideTip(); return; }
-    showTip(cssX, cssY, labeler(pick.p));
-  };
-
-  svg.addEventListener('mousemove', onMove);
-  svg.addEventListener('pointermove', onMove);
-  svg.addEventListener('mouseleave', hideTip);
-
-  svg.querySelectorAll('circle.marker').forEach(el=>{
-    el.addEventListener('mousemove', (evt)=>{
-      const rect = svg.getBoundingClientRect();
-      const cssX = evt.clientX - rect.left, cssY = evt.clientY - rect.top;
-      showTip(cssX, cssY, el.getAttribute('data-label'));
-    });
-    el.addEventListener('mouseleave', hideTip);
-  });
-
-  svg.addEventListener('click', (evt)=>{
-    const {svgX, cssX, cssY} = toCoords(evt);
-    const pick = nearest(svgX);
-    if(!pick){ hideTip(); return; }
-    if(tip.style.display==='block'){ hideTip(); } else { showTip(cssX, cssY, labeler(pick.p)); }
-  });
+function currentItems(){
+ const now=new Date(),today=localISO(now),rows=getRows(today);
+ const pick=key=>rows.filter(r=>r[key]!=null).reduce((best,r)=>!best||Math.abs(r.t-now.getTime())<Math.abs(best.t-now.getTime())?r:best,null);
+ const valid=row=>row&&Math.abs(row.t-now.getTime())<=65*60000;
+ const tide=pick('tide'),temp=pick('temp'),pop=pick('pop'),cloud=pick('cloud'),wind=pick('wind');
+ return [
+  ['Tide prediction',valid(tide)?`${tide.tide.toFixed(2)} ft`:'—'],
+  ['Temperature forecast',valid(temp)?`${Math.round(temp.temp)} °F`:'—'],
+  ['Rain chance forecast',valid(pop)?`${Math.round(pop.pop)}%`:'—'],
+  ['Cloud cover forecast',valid(cloud)?`${Math.round(cloud.cloud)}%`:'—'],
+  ['Cherry Point shore wind',valid(wind)?`${wind.wind} mph${wind.windDir?' '+wind.windDir:''}`:'—']
+ ];
 }
-
-/* Multi-series chart for % precip + % cloud cover */
-function drawMultiChart({svgId, tipId, series, unit, shade, snapPx=12, range}){
-  const svg = document.getElementById(svgId);
-  const {W, H} = setupSvgSize(svg);
-  const P = {l:48,r:48,t:18,b:36};
-  svg.innerHTML='';
-
-  const H0 = (range?.start ?? 0), H1 = (range?.end ?? 23);
-  const x = h => P.l + ((h-H0)/(H1-H0))*(W-P.l-P.r);
-
-  const AXIS_FONT = isSmall()?28:14;
-  const LINE_W = isSmall()?16:4;
-  const DOT_R  = isSmall()?18:4.5;
-
-  // y-scale fixed 0..100
-  const yMin=0, yMax=100;
-  const y = v => H-P.b - ((v - yMin)/(yMax-yMin))*(H-P.t-P.b);
-
-  const g = (tag, attrs) => { const el=document.createElementNS('http://www.w3.org/2000/svg', tag); for(const k in attrs) el.setAttribute(k, attrs[k]); return el; };
-
-  // Night shading
-  if(shade){
-    const shadeColor = 'rgba(10, 17, 32)';
-    const sx = (h) => x(Math.max(H0, Math.min(H1, h)));
-    if(H0 < (shade.sunriseHour||6)) svg.appendChild(g('rect',{x:sx(H0),y:P.t,width:Math.max(0,sx(Math.min(H1, shade.sunriseHour))-sx(H0)),height:H-P.t-P.b,fill:shadeColor}));
-    if(H1 > (shade.sunsetHour||18)) svg.appendChild(g('rect',{x:sx(Math.max(H0, shade.sunsetHour)),y:P.t,width:Math.max(0,sx(H1)-sx(Math.max(H0, shade.sunsetHour))),height:H-P.t-P.b,fill:shadeColor}));
-  }
-
-  // Grid & ticks
-  const tickStep = (H1-H0) <= 16 ? 2 : 3;
-  for(let h=H0; h<=H1; h+=tickStep){
-    svg.appendChild(g('line',{x1:x(h),y1:P.t,x2:x(h),y2:H-P.b,stroke:'#22324d','stroke-dasharray':'3 4'}));
-    const tx=g('text',{x:x(h),y:H-10,fill:'#9db1cc','text-anchor':'middle','font-size':String(AXIS_FONT)}); tx.textContent=(h%12||12)+(h<12?'a':'p'); svg.appendChild(tx);
-  }
-  for(let v=0; v<=100; v+=20){
-    const yy=y(v); svg.appendChild(g('line',{x1:P.l-4,y1:yy,x2:W-P.r,y2:yy,stroke:'#22324d','stroke-dasharray':'3 4'}));
-    const tx=g('text',{x:P.l-8,y:yy+(AXIS_FONT/3),fill:'#9db1cc','text-anchor':'end','font-size':String(AXIS_FONT)}); tx.textContent=v; svg.appendChild(tx);
-  }
-
-  // Series
-  series.forEach(s=>{
-    const pts = s.data.filter(d=>d.v!=null);
-    const path = pts.map((d,i)=>`${i?'L':'M'}${x(d.h)},${y(d.v)}`).join(' ');
-    if(path){
-      svg.appendChild(g('path',{d:path,fill:'none','stroke-width':String(LINE_W),stroke:s.color}));
-      pts.forEach(d=> svg.appendChild(g('circle', {cx:x(d.h), cy:y(d.v), r:String(DOT_R), fill:s.color})));
-    }
-  });
-
-  // Tooltip
-  const tip = document.getElementById(tipId);
-  const toCoords = (evt) => {
-    const rect = svg.getBoundingClientRect();
-    const cssX = evt.clientX - rect.left, cssY = evt.clientY - rect.top;
-    const pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
-    const inv = svg.getScreenCTM().inverse(); const s = pt.matrixTransform(inv);
-    return { svgX:s.x, cssX, cssY };
-  };
-  function showTip(cssX,cssY,label){ tip.style.left = cssX+'px'; tip.style.top = (cssY-12)+'px'; tip.style.display='block'; tip.textContent = label; }
-  function hideTip(){ tip.style.display='none'; }
-
-  const nearest = (svgX) => {
-    let bestH = H0, bestDx = Infinity;
-    for(let h=H0; h<=H1; h++){ const dx = Math.abs(svgX - x(h)); if(dx<bestDx){bestDx=dx; bestH=h;} }
-    if(bestDx > snapPx) return null;
-    const picks = series.map(s=>{
-      const p = s.data.reduce((a,b)=> Math.abs(b.h-bestH) < Math.abs((a?.h??-1)-bestH) ? b : a, null);
-      return p && Math.abs(p.h-bestH)<=0.51 ? {name:s.name, v:p.v} : null;
-    }).filter(Boolean);
-    return {h:bestH, picks};
-  };
-
-  const onMove = (evt) => {
-    const {svgX, cssX, cssY} = toCoords(evt);
-    const pick = nearest(svgX);
-    if(!pick){ hideTip(); return; }
-    const lines = [`${hToLabel(pick.h)}`].concat(pick.picks.map(p=> `${p.name}: ${Math.round(p.v)}${unit}`));
-    showTip(cssX, cssY, lines.join(' • '));
-  };
-
-  svg.addEventListener('mousemove', onMove);
-  svg.addEventListener('pointermove', onMove);
-  svg.addEventListener('mouseleave', hideTip);
+function renderCurrent(){
+ const grid=$('currentGrid');grid.replaceChildren();
+ for(const [label,value] of currentItems()){
+  const item=$n('div','current-stat');item.append($n('div','stat-label',label),$n('div','stat-value',value));grid.append(item);
+ }
+ $('currentStatus').textContent=`At ${clock(new Date())} Pacific · nearest available hourly forecasts / tide prediction · NOT live measurements`;
 }
-
-/* ---------- REFRESH ---------- */
-setInterval(async ()=>{
-  try{
-    const meta = await jsonFetch(`https://api.weather.gov/points/${LAT},${LON}`, {headers:{"User-Agent":"crabdash/1.4"}});
-    const hourlyUrl = meta.properties.forecastHourly;
-    cache.gridUrl = meta.properties.forecastGridData;
-    cache.hourlyFx = (await jsonFetch(hourlyUrl, {headers:{"User-Agent":"crabdash/1.4"}})).properties.periods || [];
-    cache.marine = await fetchMarineCWF(MARINE_ZONE,WFO);
-    cache.alerts = await fetchNWSAlerts(MARINE_ZONE);
-    cache.gridSkyCover = {}; // invalidate daily cache (grid may update)
-    renderAll();
-  }catch(e){ console.warn('Periodic refresh failed', e); }
-}, 2*60*60*1000);
-
-applyResponsiveHeader();
-renderAll();
+function renderSummary(iso,rows){const values=(key)=>rows.map(r=>r[key]).filter(v=>v!=null);const stats=[
+ ['Air temp'+(iso===localISO(new Date())?' (remaining today)':''),values('temp').length?`${Math.min(...values('temp'))}–${Math.max(...values('temp'))} °F`:'—'],
+ ['Highest hourly rain chance',values('pop').length?`${Math.max(...values('pop'))}%`:'—'],
+ ['Max cloud cover',values('cloud').length?`${Math.max(...values('cloud'))}%`:'—'],
+ ['Peak wind forecast',values('wind').length?`Up to ${Math.max(...values('wind'))} mph`:'—'],
+ ['Daylight',dailySlot('sun',iso).status==='ready'?`${clock(dailySlot('sun',iso).data.sunrise)} – ${clock(dailySlot('sun',iso).data.sunset)}`:'—']
+ ];const grid=$('summaryGrid');grid.replaceChildren();for(const [label,val] of stats){const box=$n('div','stat');box.append($n('div','stat-label',label),$n('div','stat-value',val));grid.append(box);}
+ const events=$('tideEvents'),src=dailySlot('events',iso);events.replaceChildren();if(src.status!=='ready'){events.append($n('p','state '+(src.status==='error'?'error':'loading'),sourceMessage(src,'high and low tide events')));return;}
+ if(!src.data.length){events.append($n('p','state','No high/low events available for this date.'));return;}
+ for(const e of src.data){const item=$n('div','event');item.append($n('strong','',e.type==='H'?'↑ High ':'↓ Low '));const t=$n('time','',clockMinute(e.hour));const firstHour=rows.find(r=>r.hour===Math.floor(e.hour));t.dateTime=firstHour?new Date(firstHour.t+Math.round((e.hour%1)*60)*60000).toISOString():localStamp(iso,e.hm);item.append(t,document.createTextNode(` · ${e.value.toFixed(2)} ft`));item.dataset.tideType=e.type;item.dataset.heightFt=String(e.value);events.append(item);}
+}
+function renderSun(iso){const src=dailySlot('sun',iso),box=$('sunDusk');box.replaceChildren();if(src.status==='ready'){for(const [label,d] of [['Sunrise',src.data.sunrise],['Sunset',src.data.sunset]]){const dt=$n('dt','',label),dd=$n('dd');const tm=$n('time','',clock(d));tm.dateTime=d.toISOString();dd.append(tm);box.append(dt,dd);}}displayStatus($('sunStatus'),src,'sunrise and sunset');}
+function renderShore(rows){const box=$('weather');box.replaceChildren();const withWx=rows.filter(r=>r.temp!=null||r.description);const wx=state.core.weather;let pairs=[];
+ if(withWx.length){const temps=withWx.map(p=>p.temp).filter(v=>v!=null);pairs=[['Temperature range',temps.length?`${Math.min(...temps)}–${Math.max(...temps)} °F`:'—'],['First available hour',`${clockHour(withWx[0].hour)} · ${withWx[0].description||'—'} · ${withWx[0].windRaw||'—'} ${withWx[0].windDir}`]];}
+ for(const [label,val] of pairs){box.append($n('dt','',label),$n('dd','',val));}displayStatus($('shoreStatus'),wx,'shore weather');if(wx.status==='ready'&&!withWx.length)$('shoreStatus').textContent='No hourly forecast for this date.';
+}
+function renderMarine(iso){const src=state.core.marine,box=$('marine');box.replaceChildren();const status=$('marineStatus');$('marineSource').textContent='Coastal Waters Forecast · National Weather Service, Seattle'+(src.data?.issued?` · issued ${src.data.issued} (Pacific)`:'');
+ if(src.status!=='ready'){displayStatus(status,src,'marine forecast');if(!hasData(src))return;}
+ const periods=src.data.periods.filter(p=>p.iso===iso);
+ if(periods.length){for(const p of periods){const article=$n('article','period');article.dataset.forecastDate=iso;article.append($n('h3','',p.name),$n('p','',p.text));box.append(article);}if(src.status==='ready')status.textContent='';}
+ else{status.className='state '+(['stale','error'].includes(src.status)?'error':'');const noMatch=src.data.issued?'No published PZZ133 forecast period matches this day.':'Marine bulletin date could not be determined; relative periods are withheld to avoid showing the wrong date.';status.textContent=[sourceMessage(src,'marine forecast'),noMatch].filter(Boolean).join(' ');}
+}
+function renderTable(iso,rows){$('hourlyCaption').textContent=`${wideDateFormat.format(utcNoon(iso))} · Pacific time · full day`;
+ const body=$('hourlyBody');body.replaceChildren();for(const r of rows){const tr=$n('tr');tr.dataset.localHour=r.hm;const time=$n('time','',`${clockHour(r.hour)} ${r.zone}`);time.dateTime=new Date(r.t).toISOString();const th=$n('th');th.scope='row';th.append(time);tr.append(th);
+ for(const [key,suffix,digits] of [['tide','',2],['temp','',0],['pop','',0],['cloud','',0]]){const td=$n('td');const value=r[key];if(value==null)td.textContent='—';else{const d=$n('data','',`${Number(value).toFixed(digits)}${suffix}`);d.value=String(value);td.append(d);}tr.append(td);}
+ const wind=$n('td','',r.windRaw?`${r.windRaw} ${r.windDir}`:'—');tr.append(wind);body.append(tr);}
+}
+const svgNS='http://www.w3.org/2000/svg';
+function sEl(tag,attrs={}){const el=document.createElementNS(svgNS,tag);for(const [k,v] of Object.entries(attrs))el.setAttribute(k,String(v));return el;}
+function chartData(rows,key){return rows.map(r=>({hour:r.hour,v:r[key],dir:r.windDir}));}
+let chartClockUpdates=[];
+let chartTipDismissals=[];
+const chartListenerControllers=new WeakMap();
+function updateChartClocks(){renderCurrent();for(const fn of chartClockUpdates)fn();}
+function renderCharts(iso,rows){chartClockUpdates=[];chartTipDismissals=[];const sun=dailySlot('sun',iso);const shade=sun.status==='ready'?{rise:localParts(sun.data.sunrise).hour+localParts(sun.data.sunrise).minute/60,set:localParts(sun.data.sunset).hour+localParts(sun.data.sunset).minute/60}:null;
+ const tideSrc=dailySlot('tide',iso),eSrc=dailySlot('events',iso);
+ const tide=hasData(tideSrc)?tideSrc.data.map(p=>({hour:p.hour,v:p.value})):[];
+ const events=hasData(eSrc)?eSrc.data:[];
+ drawChart('Tide',[{name:'Tide',data:tide,color:'var(--tide)',unit:'ft'}],{shade,events,mode:'auto'});
+ drawChart('Temp',[{name:'Temperature',data:chartData(rows,'temp'),color:'var(--temp)',unit:'°F'}],{shade,mode:'auto'});
+ drawChart('Pop',[{name:'Precipitation',data:chartData(rows,'pop'),color:'var(--pop)',unit:'%'},{name:'Cloud cover',data:chartData(rows,'cloud'),color:'var(--cloud)',unit:'%'}],{shade,mode:'percent'});
+ drawChart('Wind',[{name:'Wind (upper forecast)',data:chartData(rows,'wind'),color:'var(--wind)',unit:'mph'}],{shade,mode:'wind'});
+ displayStatus($('statusTide'),tideSrc,'tide predictions');displayStatus($('statusTemp'),state.core.weather,'hourly temperature');
+ const p=$('statusPop');const issues=[state.core.weather,state.core.sky].filter(s=>s.status!=='ready');p.textContent=issues.map(s=>sourceMessage(s,s===state.core.sky?'cloud cover':'precipitation')).join(' ');p.className='state '+(issues.some(s=>['error','stale'].includes(s.status))?'error':'');
+ displayStatus($('statusWind'),state.core.weather,'hourly wind');
+}
+function drawChart(id,series,opts){
+ const svg=$('chart'+id),read=$('read'+id),wrap=svg.parentElement;
+ chartListenerControllers.get(svg)?.abort();
+ const listenerController=new AbortController();chartListenerControllers.set(svg,listenerController);
+ const on=(type,handler)=>svg.addEventListener(type,handler,{signal:listenerController.signal});
+ svg.replaceChildren();wrap.querySelector('.chart-tooltip')?.remove();
+ const tip=$n('div','chart-tooltip');tip.setAttribute('aria-hidden','true');
+ const tipTime=$n('div','chart-tip-time'),tipValue=$n('div','chart-tip-value');tip.append(tipTime,tipValue);wrap.append(tip);
+ const W=Math.max(190,Math.round(wrap.getBoundingClientRect().width));
+ const compact=W<360,mid=W<680;
+ const H=compact?196:mid?222:240;
+ const P={l:compact?39:mid?45:50,r:compact?16:mid?19:24,t:18,b:compact?30:32};
+ svg.style.height=H+'px';svg.setAttribute('viewBox',`0 0 ${W} ${H}`);svg.setAttribute('preserveAspectRatio','xMidYMid meet');
+ const dw=W-P.l-P.r,dh=H-P.t-P.b,x=h=>P.l+(h/24)*dw;
+ const included=series.flatMap(s=>s.data).filter(p=>p.v!=null&&p.hour>=0&&p.hour<24);
+ const relevant=[...new Set(included.map(p=>p.hour))].sort((a,b)=>a-b);
+ let currentIndex=Math.max(0,relevant.findIndex(h=>h>=12)),inspecting=false,touchPinned=false;
+ const valuesAt=h=>series.map(s=>({series:s,point:s.data.find(q=>Math.abs(q.hour-h)<.001)}));
+ const labelAt=h=>{const values=valuesAt(h).map(({series:s,point:p})=>`${s.name}: ${p?.v==null?'—':`${p.v} ${s.unit}`}${id==='Wind'&&p?.v!=null&&p.dir?` ${p.dir}`:''}`);return `${clockHour(Math.floor(h))} · ${values.join(' · ')}`;};
+ let yMin=0,yMax=100;
+ if(opts.mode==='wind'){ // A 9 mph wind must never fill the full plot.
+  const maxWind=Math.max(0,...included.map(p=>p.v));
+  yMin=0;yMax=maxWind<=20?20:maxWind<=40?Math.ceil(maxWind/5)*5:maxWind<=80?Math.ceil(maxWind/10)*10:Math.ceil(maxWind/20)*20;
+ } else if(opts.mode==='percent'){yMin=0;yMax=100;}
+ else{
+  // Tide extrema fall between hourly samples, so include high/low points in axis bounds.
+  const vals=included.map(p=>p.v).concat((opts.events||[]).filter(e=>Number.isFinite(e.value)).map(e=>e.value));
+  if(vals.length){const min=Math.min(...vals),max=Math.max(...vals),pad=Math.max(1,(max-min)*.17);yMin=Math.floor(min-pad);yMax=Math.ceil(max+pad);if(yMin===yMax)yMax++;}
+ }
+ const y=v=>H-P.b-(v-yMin)/(yMax-yMin)*dh;
+ if(opts.shade){const sx=h=>x(Math.min(24,Math.max(0,h)));for(const [start,stop] of [[0,Math.min(24,opts.shade.rise)],[Math.max(0,opts.shade.set),24]])if(stop>start)svg.append(sEl('rect',{x:sx(start),y:P.t,width:sx(stop)-sx(start),height:dh,fill:'#0a1120'}));}
+ const tick=W<340?6:W<510?4:3;
+ for(let h=0;h<=24;h+=tick){const xx=x(h);svg.append(sEl('line',{x1:xx,y1:P.t,x2:xx,y2:H-P.b,stroke:'#273750','stroke-dasharray':'3 4'}));const t=sEl('text',{x:xx,y:H-9,fill:'#b5c6dd','text-anchor':'middle','font-size':compact?11:12});t.textContent=h===24?'12a':(h%12||12)+(h<12?'a':'p');svg.append(t);}
+ const gridValues=opts.mode==='wind'?Array.from({length:yMax/(yMax<=40?5:yMax<=80?10:20)+1},(_,i)=>i*(yMax<=40?5:yMax<=80?10:20)):Array.from({length:5},(_,i)=>yMin+(yMax-yMin)*i/4);
+ for(const val of gridValues){const yy=y(val);svg.append(sEl('line',{x1:P.l,y1:yy,x2:W-P.r,y2:yy,stroke:'#273750','stroke-dasharray':'3 4'}));const t=sEl('text',{x:P.l-7,y:yy+4,fill:'#b5c6dd','text-anchor':'end','font-size':compact?10:12});t.textContent=Number.isInteger(val)?String(val):val.toFixed(1);svg.append(t);}
+ if(!included.length){const t=sEl('text',{x:W/2,y:H/2,'text-anchor':'middle',fill:'#9db1cc','font-size':13});t.textContent='No chart values available';svg.append(t);}
+ for(const s of series){const pts=s.data.filter(p=>p.v!=null&&p.hour>=0&&p.hour<24).sort((a,b)=>a.hour-b.hour);if(!pts.length)continue;let previous=null,pathText='';for(const p of pts){pathText+=`${previous!==null&&p.hour-previous<=1.01?' L':' M'}${x(p.hour)},${y(p.v)}`;previous=p.hour;}svg.append(sEl('path',{fill:'none',stroke:s.color,'stroke-width':compact?2.3:mid?2.8:3.2,'stroke-linejoin':'round','stroke-linecap':'round',d:pathText.trim()}));for(const p of pts)svg.append(sEl('circle',{cx:x(p.hour),cy:y(p.v),r:compact?2.5:3.1,fill:s.color}));}
+ const events=(opts.events||[]).filter(e=>e.hour>=0&&e.hour<=24&&Number.isFinite(e.value));
+ for(const ev of events){const marker=sEl('circle',{cx:x(ev.hour),cy:y(ev.value),r:compact?5:6,fill:'#121c2d',stroke:'var(--tide)','stroke-width':2.2});marker.setAttribute('aria-hidden','true');svg.append(marker);}
+ const nowLine=sEl('line',{class:'now-line',y1:P.t,y2:H-P.b,stroke:'#ffe066','stroke-width':2,visibility:'hidden'});
+ const nowTag=sEl('text',{class:'now-label',y:P.t+13,fill:'#ffe066','font-size':compact?10:11,'font-weight':700,'text-anchor':'start',visibility:'hidden'});nowTag.textContent='NOW';svg.append(nowLine,nowTag);
+ const guide=sEl('line',{y1:P.t,y2:H-P.b,stroke:'#cce7ff','stroke-width':1.5,'stroke-dasharray':'4 3',visibility:'hidden'});svg.append(guide);
+ const closest=hour=>relevant.length?relevant.reduce((a,b)=>Math.abs(b-hour)<Math.abs(a-hour)?b:a,relevant[0]):null;
+ const nowPosition=()=>{const now=new Date(),lp=localParts(now);return {now,lp,hour:lp.hour+lp.minute/60+now.getUTCSeconds()/3600,today:lp.iso===state.days[state.day]};};
+ const hideTip=()=>{tip.classList.remove('visible');tip.setAttribute('aria-hidden','true');};
+ const drawDefault=()=>{
+  const {now,hour,today}=nowPosition(),visible=today&&hour>=0&&hour<=24;
+  nowLine.setAttribute('visibility',visible?'visible':'hidden');nowTag.setAttribute('visibility',visible?'visible':'hidden');
+  if(visible){const xx=x(hour);nowLine.setAttribute('x1',xx);nowLine.setAttribute('x2',xx);nowTag.setAttribute('x',xx>W-P.r-34?xx-4:xx+4);nowTag.setAttribute('text-anchor',xx>W-P.r-34?'end':'start');}
+  if(inspecting)return;
+  guide.setAttribute('visibility','hidden');hideTip();
+  if(today){const h=closest(hour);read.textContent=h!==null&&Math.abs(h-hour)<=1.05?`Now ${clock(now)} · nearest hour ${labelAt(h)}`:`Now ${clock(now)} · no nearby hourly value`;return;}
+  const h=closest(12);read.textContent=h!==null?`Midday forecast · ${labelAt(h)}`:'No hourly values available.';
+ };
+ chartClockUpdates.push(drawDefault);
+ // Choose the hour at the tapped x-position, unless the finger is on a tide
+ // high/low marker or near the NOW line. The marker gets precedence.
+ function choose(pt){
+  const hour=Math.max(0,Math.min(24,(pt.x-P.l)/dw*24));
+  let nearEvent=null,bestDistance=Infinity;
+  for(const ev of events){const dist=Math.hypot(x(ev.hour)-pt.x,y(ev.value)-pt.y);if(dist<bestDistance){nearEvent=ev;bestDistance=dist;}}
+  if(nearEvent&&bestDistance<=27)return {kind:'event',hour:nearEvent.hour,ev:nearEvent,py:y(nearEvent.value)};
+  const {hour:nowHour,today}=nowPosition();
+  if(today&&Math.abs(x(nowHour)-pt.x)<=Math.max(7,Math.min(12,dw/24*.6))){
+    const nearest=closest(nowHour);if(nearest!==null)return {kind:'now',hour:nowHour,nearest,py:y(valuesAt(nearest).find(v=>v.point?.v!=null)?.point.v??yMin)};
+  }
+  const nearHour=closest(hour);if(nearHour===null)return null;
+  const data=valuesAt(nearHour).find(v=>v.point?.v!=null)?.point;
+  return {kind:'hour',hour:nearHour,nearest:nearHour,py:y(data?.v??yMin)};
+ }
+ function tooltipText(sel){
+  if(sel.kind==='event')return {time:`${sel.ev.type==='H'?'HIGH TIDE':'LOW TIDE'} · ${clockMinute(sel.hour)}`,value:`${sel.ev.value.toFixed(2)} ft`};
+  const vals=valuesAt(sel.nearest);
+  let value;
+  if(id==='Pop')value=vals.map(({series:s,point:p})=>`${s.name==='Precipitation'?'Rain':'Cloud'} ${p?.v==null?'—':`${Math.round(p.v)}%`}`).join(' · ');
+  else{const {point:p}=vals[0];value=p?.v==null?'—':id==='Tide'?`${Number(p.v).toFixed(2)} ft`:id==='Temp'?`${Math.round(p.v)} °F`:`${p.v} mph${p.dir?' '+p.dir:''}`;}
+  if(sel.kind==='now')value='≈ '+value;
+  const time=sel.kind==='now'?`NOW · ${clock(nowPosition().now)}`:clockHour(sel.hour);
+  return {time,value};
+ }
+ function show(sel){
+  if(!sel)return;
+  for(const other of chartTipDismissals)if(other.chart!==id)other.reset();
+  inspecting=true;
+  const label=tooltipText(sel);tipTime.textContent=label.time;tipValue.textContent=label.value;tip.dataset.kind=sel.kind;
+  tip.classList.add('visible');tip.setAttribute('aria-hidden','false');
+  // Constrain horizontally to the panel; keep the bubble above the selected
+  // point (and finger) whenever the screen has room for it.
+  const tipW=tip.offsetWidth,tipH=tip.offsetHeight;
+  const cx=x(sel.hour),left=Math.max(tipW/2+3,Math.min(W-tipW/2-3,cx));
+  tip.style.left=left+'px';tip.style.top=(sel.py-tipH-22)+'px';
+  guide.setAttribute('x1',cx);guide.setAttribute('x2',cx);guide.setAttribute('visibility','visible');
+  read.textContent=sel.kind==='event'?`${sel.ev.type==='H'?'High':'Low'} tide ${clockMinute(sel.hour)} · ${sel.ev.value.toFixed(2)} ft`:sel.kind==='now'?`Now ${clock(nowPosition().now)} · nearest hour ${labelAt(sel.nearest)}`:labelAt(sel.nearest);
+  if(sel.kind==='hour'||sel.kind==='now')currentIndex=relevant.indexOf(sel.nearest);
+ }
+ function ptFromEvent(e){const rect=svg.getBoundingClientRect();return {x:(e.clientX-rect.left)*W/rect.width,y:(e.clientY-rect.top)*H/rect.height};}
+ chartTipDismissals.push({chart:id,reset:()=>{inspecting=false;touchPinned=false;drawDefault();}});
+ on('pointerdown',e=>{const sel=choose(ptFromEvent(e));if(!sel)return;touchPinned=e.pointerType==='touch'||e.pointerType==='pen';show(sel);});
+ on('pointermove',e=>{
+  if(e.pointerType==='touch'&&!e.buttons)return;
+  if(e.pointerType==='pen'&&!e.buttons)return;
+  if(!relevant.length&&!events.length)return;
+  if(e.pointerType==='mouse')touchPinned=false;
+  show(choose(ptFromEvent(e)));
+ });
+ on('pointerleave',e=>{if(e.pointerType==='mouse'&&!touchPinned){inspecting=false;drawDefault();}});
+ on('pointercancel',e=>{if(e.pointerType==='touch'){touchPinned=false;inspecting=false;drawDefault();}});
+ on('focus',()=>{if(!inspecting&&relevant.length){const h=relevant[currentIndex];show({kind:'hour',hour:h,nearest:h,py:y(valuesAt(h).find(v=>v.point?.v!=null)?.point.v??yMin)});}});
+ on('blur',()=>{if(!touchPinned){inspecting=false;drawDefault();}});
+ on('keydown',e=>{
+  if(e.key==='Escape'){touchPinned=false;inspecting=false;drawDefault();return;}
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key)||!relevant.length)return;
+  e.preventDefault();touchPinned=false;
+  currentIndex=e.key==='Home'?0:e.key==='End'?relevant.length-1:Math.max(0,Math.min(relevant.length-1,currentIndex+(e.key==='ArrowRight'?1:-1)));
+  const h=relevant[currentIndex];show({kind:'hour',hour:h,nearest:h,py:y(valuesAt(h).find(v=>v.point?.v!=null)?.point.v??yMin)});
+ });
+ drawDefault();
+}
+// Dismiss the one active tooltip when tapping outside the graphs.
+document.addEventListener('pointerdown',e=>{if(!e.target.closest('.chart-wrap'))for(const entry of chartTipDismissals)entry.reset();});
+let chartResizePending=false;window.addEventListener('resize',()=>{if(chartResizePending)return;chartResizePending=true;requestAnimationFrame(()=>{chartResizePending=false;if(state.days.length){const iso=state.days[state.day];renderCharts(iso,getRows(iso));}});});
+// Browser-readable, plain-text report. It is intentionally not a server endpoint:
+// agents that do not run JavaScript must use a browser tool to access this.
+function reportSource(src,name){return `SOURCE ${freshnessLabel(src,name,true)}${src.at?` | last_success=${src.at.toISOString()}`:''}${src.issuedAt?` | issued_at=${src.issuedAt.toISOString()}`:''}`;}
+function reportLine(items){return items.map(([k,v])=>`${k}=${v??'—'}`).join(' | ');}
+function reportStatus(){
+ const core=Object.values(state.core),days=state.days.flatMap(iso=>['tide','events','sun'].map(kind=>dailySlot(kind,iso)));
+ const slots=[...core,...days];
+ return slots.some(s=>s.status==='loading')?'LOADING':slots.some(s=>s.status!=='ready')?'PARTIAL':'READY';
+}
+function renderAgentReport(){
+ const page=$('agentReportPage'),output=$('agentReportText');
+ if(!page||!output||!state.days.length)return;
+ const status=reportStatus();page.dataset.reportStatus=status.toLowerCase();
+ const lines=[
+  'CRAB DASH — COMPLETE FIVE-DAY REPORT',
+  `APP_NAME: ${APP_NAME}`,
+  `APP_VERSION: ${APP_VERSION}`,
+  `REPORT_STATUS: ${status}`,
+  `GENERATED_AT: ${new Date().toISOString()}`,
+  `TIME_ZONE: ${TZ}`,
+  'LOCATION: Cherry Point, WA (Bellingham area)',
+  `TIDE_STATION: ${STATION} | DATUM: MLLW | UNIT: ft`,
+  `SHORE_POINT_FORECAST: ${LAT},${LON} (near Cherry Point shoreline) | wind in mph (LAND/SHORE-POINT NWS hourly, NOT marine wind)`,
+  `MARINE_ZONE: ${MARINE_ZONE} | written NWS Coastal Waters Forecast; marine wind in original bulletin units (usually kt)`,
+  'IMPORTANT: Tide heights are PREDICTIONS and weather values are FORECASTS; they are NOT current sensor measurements.',
+  'IMPORTANT: Wind chart/current wind uses shore-point wind in mph, NOT zone-wide marine wind.',
+  'IMPORTANT: An empty or failed marine-alert lookup is NOT proof of safe marine conditions.',
+  '',
+  '=== SOURCE STATUS / FRESHNESS ===',
+  reportSource(state.core.alerts,'marine_alerts'),
+  reportSource(state.core.weather,'nws_hourly_weather'),
+  reportSource(state.core.sky,'nws_cloud_cover'),
+  reportSource(state.core.marine,'marine_bulletin'),
+  '',
+  '=== VALUES NEAR NOW (FORECAST / PREDICTION, NOT OBSERVATIONS) ===',
+  `LOCAL_TIME: ${dateTimeText(new Date())}`,
+  ...currentItems().map(([name,value])=>`${name}: ${value}`),
+  '',
+  '=== MARINE ALERTS (PZZ133) ==='
+ ];
+ const alerts=state.core.alerts;
+ if(!hasData(alerts))lines.push(`ALERT_STATUS: UNKNOWN (${alerts.status})`);
+ else{
+  lines.push(`ALERT_STATUS: ${alerts.status==='ready'?'Checked successfully':`LAST KNOWN ONLY / CURRENT STATUS UNKNOWN (${alerts.status})`}`);
+  lines.push(`ALERT_COUNT_AT_LAST_SUCCESS: ${alerts.data.length}`);
+  for(const a of alerts.data){const p=a.properties||{};
+   lines.push(`ALERT: ${p.event||'Marine alert'} | severity=${p.severity||'unknown'} | onset=${p.onset||'unknown'} | ends=${p.ends||'unknown'} | area=${p.areaDesc||'unknown'} | id=${p.id||a.id||'unknown'}`);
+   if(p.headline)lines.push(`HEADLINE: ${p.headline}`);
+   if(p.description)lines.push(`DESCRIPTION: ${p.description.trim()}`);
+   if(p.instruction)lines.push(`INSTRUCTIONS: ${p.instruction.trim()}`);
+   if(officialAlertURL(a))lines.push(`URL: ${officialAlertURL(a)}`);
+  }
+ }
+ for(const iso of state.days){
+  const rows=getRows(iso),tide=dailySlot('tide',iso),events=dailySlot('events',iso),sun=dailySlot('sun',iso),marine=state.core.marine;
+  const vals=key=>rows.map(r=>r[key]).filter(v=>v!=null);
+  const range=key=>vals(key).length?`${Math.min(...vals(key))}–${Math.max(...vals(key))}`:'UNAVAILABLE';
+  const max=key=>vals(key).length?String(Math.max(...vals(key))):'UNAVAILABLE';
+  const count=key=>rows.filter(r=>r[key]!=null).length;
+  lines.push('');lines.push(`=== DAY ${iso} (${wideDateFormat.format(utcNoon(iso))}) ===`);
+  if(iso===localISO(new Date()))lines.push('SCOPE: Weather forecast covers remaining available hours TODAY, not earlier past hours. Tides cover calendar day.');
+  else lines.push('SCOPE: Future-day forecast; coverage may be partial.');
+  lines.push(`HOURLY_COVERAGE: tide=${count('tide')}/${rows.length} temp=${count('temp')}/${rows.length} rain=${count('pop')}/${rows.length} clouds=${count('cloud')}/${rows.length} wind=${count('wind')}/${rows.length}`);
+  lines.push(`SUMMARY: temp_F=${range('temp')} | highest_hourly_rain_chance_pct=${max('pop')} | max_cloud_pct=${max('cloud')} | peak_shore_wind_mph=${max('wind')}`);
+  for(const [key,src] of [['tide',tide],['tide_events',events],['sunrise_sunset',sun]])lines.push(`DAY_SOURCE ${key}: ${src.status}${src.error?' | error='+src.error:''}${src.at?' | checked='+src.at.toISOString():''}`);
+  if(hasData(sun))lines.push(`SUN: sunrise=${sun.data.sunrise.toISOString()} (${clock(sun.data.sunrise)} Pacific) | sunset=${sun.data.sunset.toISOString()} (${clock(sun.data.sunset)} Pacific)`);
+  else lines.push('SUN: UNAVAILABLE');
+  if(hasData(events)&&events.data.length){for(const e of events.data)lines.push(`TIDE_EVENT: ${e.type==='H'?'HIGH':'LOW'} | time_local=${clockMinute(e.hour)} | height_ft=${e.value.toFixed(2)}`);}else lines.push('TIDE_EVENTS: NONE AVAILABLE');
+  if(hasData(marine)){
+   const periods=marine.data.periods.filter(p=>p.iso===iso);
+   if(periods.length)for(const p of periods)lines.push(`MARINE_PERIOD ${p.name}: ${p.text}`);
+   else lines.push('MARINE_PERIOD: NONE MATCHED / NOT PUBLISHED FOR DAY');
+   if(marine.status!=='ready')lines.push('WARNING: MARINE TEXT IS LAST KNOWN DATA, REFRESH FAILED OR IN PROGRESS.');
+  }else lines.push('MARINE_PERIOD: UNAVAILABLE');
+  lines.push('HOURLY_VALUES (Pacific local time; dash means missing; tide ft MLLW; temp °F; rain/cloud %; shore wind mph):');
+  for(const r of rows)lines.push(reportLine([['time',`${r.hm} ${r.zone}`],['tide_ft',r.tide?.toFixed(2)],['temp_F',r.temp],['rain_pct',r.pop],['cloud_pct',r.cloud],['shore_wind_mph',r.wind],['wind_dir',r.windDir||'—'],['wind_raw',r.windRaw||'—']]));
+ }
+ lines.push('');lines.push('END_CRAB_DASH_REPORT');
+ output.textContent=lines.join('\n');
+}
+init();
 </script>
 </body>
 </html>
